@@ -7,6 +7,16 @@ from app.db import transaction
 from app.config import settings
 
 
+def test_vercel_manifest_installs_locked_runtime_dependencies():
+    import tomllib
+    root=Path(__file__).parents[1]
+    manifest=tomllib.loads((root/'pyproject.toml').read_text())
+    declared=manifest['project']['dependencies']
+    locked=set((root/'requirements.lock').read_text().splitlines())
+    assert set(declared)<=locked
+    assert {'fastapi','psycopg','psycopg-binary','argon2-cffi','PyJWT','pydantic-settings'}<={line.split('==')[0] for line in declared}
+
+
 def test_managed_compatibility_keeps_original_files_and_uses_read_policies(owner):
     rows=owner.execute("SELECT rolcanlogin,rolsuper,rolbypassrls FROM pg_roles WHERE rolname='mi_guard'").fetchone()
     assert not rows['rolcanlogin'] and not rows['rolsuper']
