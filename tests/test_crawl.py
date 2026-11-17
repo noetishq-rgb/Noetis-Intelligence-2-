@@ -76,6 +76,36 @@ def test_redirect_is_checked_before_second_request_and_ip_is_pinned(monkeypatch)
     assert connections == [("93.184.216.34", 80)]
 
 
+@pytest.mark.parametrize('declared', [True, False])
+@pytest.mark.parametrize('size', [1_200_000, 2_000_000, 2_000_001])
+def test_storefront_response_budget_is_enforced_with_or_without_content_length(monkeypatch, declared, size):
+    import io
+
+    body = b'x' * size
+    class Sock:
+        def close(self): pass
+        def settimeout(self, value): pass
+    class Reply:
+        status = 200
+        def __init__(self): self.stream = io.BytesIO(body)
+        def getheaders(self):
+            return [('Content-Length', str(size))] if declared else []
+        def read(self, amount): return self.stream.read(amount)
+    class Connection:
+        def __init__(self, *args, **kwargs): self.sock = None
+        def request(self, *args, **kwargs): pass
+        def getresponse(self): return Reply()
+        def close(self): pass
+    monkeypatch.setattr(module, 'public_addresses', lambda *args: ['93.184.216.34'])
+    monkeypatch.setattr(module.socket, 'create_connection', lambda *args, **kwargs: Sock())
+    monkeypatch.setattr(module.http.client, 'HTTPConnection', Connection)
+    if size > module.MAX_RESPONSE:
+        with pytest.raises(CrawlError, match='response_too_large'):
+            fetch_public('http://example.com/', 'example.com', time.monotonic()+10)
+    else:
+        assert len(fetch_public('http://example.com/', 'example.com', time.monotonic()+10).body) == size
+
+
 def test_robots_page_bounds_and_no_script_extraction():
     calls = []
     def fetch(url, host, deadline, limit, allowed=None, trace=None):

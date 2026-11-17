@@ -15,8 +15,10 @@ from urllib.parse import urljoin, urlsplit, urlunsplit
 from urllib.robotparser import RobotFileParser
 
 USER_AGENT = "MarketingIntelligenceResearchBot/1.0"
-MAX_RESPONSE = 1_000_000
-MAX_TOTAL = 5_000_000
+# Modern storefronts include substantial inline theme markup. Keep both the
+# individual decoded response and the whole capture strictly bounded.
+MAX_RESPONSE = 2_000_000
+MAX_TOTAL = 10_000_000
 MAX_SECONDS = 60
 
 
