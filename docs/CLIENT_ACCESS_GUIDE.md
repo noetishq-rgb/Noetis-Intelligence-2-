@@ -47,3 +47,7 @@ The production login page must be reachable without a Vercel account. Production
 ## Research and integrations
 
 Creating a client or submitting their setup performs no marketing API or model call. The submitted screen explicitly says that research has not started. Model providers, source collection, worker identities and Meta/Google/email connections can be configured later without changing the client login process. Existing research approval and spending gates remain in force.
+
+## Start public website capture
+
+For a configured pilot brand, open its Brand Brain as an owner. Enter the official website in **Start with public website evidence**, then select **Queue website capture**. Use **Capture status** to inspect progress and sources. **Run worker now** performs one bounded pass immediately; the signed GitHub schedule also checks every five minutes and may be delayed by GitHub. Draft onboarding remains editable and unknown facts stay blank. Once the client completes and submits setup, the owner can organize the captured evidence into a review draft. This performs no model or marketing API call.

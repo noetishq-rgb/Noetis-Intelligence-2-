@@ -4,9 +4,10 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, Depends, HTTPException, Header, Query
 from psycopg.types.json import Jsonb
 from app.auth import actor_transaction,current_user,require_brand,require_admin
-from app.brain_models import SetupDraft,SessionSave,VersionAction,FindingReview,ThreadCreate,CommentCreate,ThreadAction,BrainConfirm,CHAPTERS
+from app.brain_models import SetupDraft,SessionSave,VersionAction,CaptureStart,FindingReview,ThreadCreate,CommentCreate,ThreadAction,BrainConfirm,CHAPTERS
 from app.repository import lock_key,payload_hash,latest_profile,workflow_for_brand
 from app.services.brain import synthesise,version_row,project,quality,threads
+from app.services.crawl import CrawlError, validate_url
 
 router=APIRouter(prefix='/v1/brands/{brand_id}/brain',tags=['Brand Brain'])
 
@@ -64,16 +65,16 @@ def submit(brand_id:UUID,session_id:UUID,body:VersionAction,user=Depends(current
     try:SetupDraft.model_validate(old['draft']).require_complete()
     except ValueError as exc:raise HTTPException(422,str(exc))
     # Owner-issued empty workspaces accept client inputs before provider setup.
-    if not old['crawl_job_id']:
-        if not b['intake'].get('client_onboarding'):
-            raise HTTPException(409,'An authorized team member must start the existing public-capture workflow')
+    if b['intake'].get('client_onboarding'):
         connection.execute('SELECT mi.submit_client_setup(%s,%s)',(brand_id,Jsonb(old['draft'])))
+    elif not old['crawl_job_id']:
+        raise HTTPException(409,'An authorized team member must start the existing public-capture workflow')
     return connection.execute("UPDATE mi.brand_onboarding_sessions SET status='submitted',version=version+1,updated_at=now() WHERE id=%s AND brand_id=%s RETURNING *",(session_id,brand_id)).fetchone()
 
 
 @router.get('/sessions/{session_id}/progress')
 def progress(brand_id:UUID,session_id:UUID,connection=Depends(actor_transaction)):
-    access(connection,brand_id);s=session(connection,brand_id,session_id)
+    b=access(connection,brand_id);s=session(connection,brand_id,session_id)
     job=connection.execute('SELECT mi.brain_job_status(%s,%s) AS job',(brand_id,s['crawl_job_id'])).fetchone()['job'] if s['crawl_job_id'] else None
     # Broader research remains the existing human/provider-gated workflow. Reflect it if one exists.
     research=connection.execute('SELECT mi.brain_job_status(%s,%s) AS job',(brand_id,s['research_job_id'])).fetchone()['job'] if s['research_job_id'] else None
@@ -92,13 +93,58 @@ def progress(brand_id:UUID,session_id:UUID,connection=Depends(actor_transaction)
         rows=connection.execute('SELECT source_id,url,title,created_at FROM mi.crawl_pages WHERE brand_id=%s AND job_id=%s ORDER BY created_at',(brand_id,s['crawl_job_id'])).fetchall()
         sources=[{'source_id':r['source_id'],'url':r['url'],'publisher':r['title'],'accessed_at':r['created_at'],'access_limitations':['Public HTML; underlying website claims require review.']} for r in rows]
     waiting_configuration=s['status']=='submitted' and not job
-    state='created' if s['status']=='draft' else 'awaiting_configuration' if waiting_configuration else 'failed' if failed or research_failed else 'completed' if v and research_done else 'awaiting_input' if done else 'running' if job and job['status']=='running' else 'cancelled' if job and job['status']=='cancelled' else 'queued'
+    state='created' if s['status']=='draft' and (not job or not b['intake'].get('client_onboarding')) else 'awaiting_configuration' if waiting_configuration else 'failed' if failed or research_failed else 'completed' if v and research_done else 'awaiting_input' if done else 'running' if job and job['status']=='running' else 'cancelled' if job and job['status']=='cancelled' else 'queued'
     return {'session_id':s['id'],'state':state,'capture_job':job,'research_job':research,'stages':stages,'sources':sources,'source_count':len(sources),'version_id':v['id'] if v else None,
-        'can_synthesise':done and bscope(connection,brand_id,'internal:read'),'can_retry':failed and bscope(connection,brand_id,'crawl:run'),
+        'can_synthesise':done and s['status']=='submitted' and bscope(connection,brand_id,'internal:read'),'can_retry':failed and bscope(connection,brand_id,'crawl:run'),
         'activity':'Your brand details are saved. Your agency can review them now; research and API connections will be configured separately.' if waiting_configuration else 'The research job failed. Review the recorded error and existing workflow gates before requesting another run.' if research_failed else 'The existing research worker is running; its output remains unconfirmed.' if research and research['status']=='running' else 'Captured public pages are ready for review. Audience and market research require the existing confirmed intake, provider and explicit research start.' if done else 'Waiting for the existing public-capture worker.' if not failed else 'Public capture failed; review access limitations before retrying.','error':research['last_error'] if research_failed else job['last_error'] if job else None}
 
 
 def bscope(c,bid,scope):return c.execute('SELECT mi.has_brand_scope(%s,%s) AS ok',(bid,scope)).fetchone()['ok']
+
+
+@router.post('/sessions/{session_id}/capture',status_code=202)
+def start_capture(brand_id:UUID,session_id:UUID,body:CaptureStart,idempotency_key:str=Header(...),user=Depends(current_user),connection=Depends(actor_transaction)):
+    """Bridge an owner-issued workspace to the existing crawl queue; no model calls."""
+    from app.main import start_crawl,validate_idempotency
+    from app.models import CrawlRequest
+    b=access(connection,brand_id,True);require_admin(connection,b['organization_id'])
+    validate_idempotency(idempotency_key);lock_key(connection,'brain:'+str(brand_id))
+    s=session(connection,brand_id,session_id)
+    key=payload_hash({'session_id':str(session_id),'key':idempotency_key})
+    previous=connection.execute("SELECT * FROM mi.idempotency_keys WHERE brand_id=%s AND actor_id=%s AND operation='crawl' AND key=%s",(brand_id,user['id'],key)).fetchone()
+    draft=deepcopy(s['draft'])
+    supplied=str(body.website_url) if body.website_url else None
+    site=next((link['url'] for link in draft['online_presence'] if link['platform']=='website'),None)
+    site=supplied or site or b['website_url']
+    if not site:raise HTTPException(422,'Add the official website URL before starting public capture')
+    try:validate_url(site)
+    except CrawlError:raise HTTPException(422,'Use a public HTTP or HTTPS website without credentials, fragments or nonstandard ports')
+    if previous:
+        previous_job=connection.execute('SELECT * FROM mi.jobs WHERE id=%s AND brand_id=%s',(previous['response']['id'],brand_id)).fetchone()
+        if not previous_job or str(s['crawl_job_id'])!=str(previous_job['id']) or previous['request_hash']!=payload_hash({'max_pages':body.max_pages}) or previous_job['payload']['url'].rstrip('/')!=site.rstrip('/'):
+            raise HTTPException(409,'Idempotency key already used with different capture inputs')
+        return {'session':s,'job':previous['response']}
+    if s['version']!=body.expected_version:raise HTTPException(409,'Draft changed; reload before starting capture')
+    if s['crawl_job_id']:raise HTTPException(409,'Public capture is already linked to this session; open its status')
+    submitted_site=next((link['url'] for link in draft['online_presence'] if link['platform']=='website'),None)
+    if s['status']=='submitted' and (not submitted_site or submitted_site.rstrip('/')!=site.rstrip('/')):
+        raise HTTPException(409,'The website must match the submitted inputs; start a new draft to change it')
+    if s['status']=='draft':
+        draft['brand_name']=draft['brand_name'] or b['name']
+        if not submitted_site:draft['online_presence'].insert(0,{'url':site,'platform':'website'})
+        elif supplied:
+            next(link for link in draft['online_presence'] if link['platform']=='website')['url']=site
+    intake={**b['intake'],**draft,'name':draft['brand_name'] or b['name'],'website_url':site,'awaiting_configuration':False}
+    connection.execute('UPDATE mi.brand_workspaces SET website_url=%s,intake=%s WHERE id=%s',(site,Jsonb(intake),brand_id))
+    source=connection.execute("SELECT id FROM mi.research_sources WHERE brand_id=%s AND provenance='client_input' ORDER BY created_at LIMIT 1",(brand_id,)).fetchone()
+    if not source:
+        connection.execute("INSERT INTO mi.research_sources(organization_id,brand_id,url,publisher,accessed_at,geographic_scope,provenance) VALUES(%s,%s,%s,'Founder supplied intake',now(),'unknown','client_input')",(b['organization_id'],brand_id,site))
+    job=start_crawl(brand_id,CrawlRequest(max_pages=body.max_pages),key,user,connection)
+    updated=connection.execute('UPDATE mi.brand_onboarding_sessions SET draft=%s,crawl_job_id=%s,version=version+1,updated_at=now() WHERE id=%s AND brand_id=%s RETURNING *',(Jsonb(draft),job.id,session_id,brand_id)).fetchone()
+    from app.services.research_storage import ensure_template
+    from app.services.research_prompt import FIELDS
+    for task_type in FIELDS:ensure_template(connection,b,user['id'],task_type)
+    return {'session':updated,'job':job}
 
 
 @router.post('/sessions/{session_id}/synthesise',status_code=201)

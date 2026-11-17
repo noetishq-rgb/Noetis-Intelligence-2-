@@ -7,7 +7,7 @@ from app.client_access import ClientCreate, ClientView, AccountAction, PasswordC
 from app.models import SCHEMA_MODELS, OnboardingInput
 from app.research_models import ResearchDossierV11, ResearchStart, ResearchReview, PromptCompile, ResearchValidationReport
 from app.main import app
-from app.brain_models import SetupDraft,FindingReview,BrainConfirm,BrainDocument,BrainStage
+from app.brain_models import SetupDraft,FindingReview,BrainConfirm,BrainDocument,BrainStage,CaptureStart
 from app.models import BrandProfileV11
 from app.workflow import TRANSITIONS, STATES, RUNNING, RESUME
 from app.planning_models import StrategySet,DeliveryPlan,CreativeBatch,PlanningStart,PlanningReview,PlanningValidation
@@ -29,6 +29,7 @@ for name, model, version in [
     ("password-change", PasswordChange, "1.0"),
     ("brand-profile-v1.1", BrandProfileV11, "1.1"),
     ("brain-setup", SetupDraft, "1.0"),
+    ("brain-capture-start", CaptureStart, "1.0"),
     ("brain-finding-review", FindingReview, "1.0"),
     ("brain-confirmation", BrainConfirm, "1.0"),
     ("brand-brain", BrainDocument, "1.0"),

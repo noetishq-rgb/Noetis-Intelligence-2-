@@ -1,8 +1,11 @@
-name: Bounded research workers
+name: Bounded website capture and research workers
 on:
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/workers.yml', 'app/crawl_scheduler.py']
 permissions:
   contents: read
 concurrency:
@@ -10,18 +13,19 @@ concurrency:
   cancel-in-progress: false
 jobs:
   crawl:
-    if: vars.NOETIS_WORKERS_ENABLED == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - uses: actions/checkout@v4
+        with: {persist-credentials: false}
       - uses: actions/setup-python@v5
         with: {python-version: '3.12'}
-      - run: pip install -r requirements.lock
-      - run: python scripts/run_worker.py --kind crawl --seconds 240
+      - run: python scripts/run_hosted_crawl.py
         env:
-          MI_DATABASE_URL: ${{ secrets.NOETIS_CRAWL_DATABASE_URL }}
-          MI_SERVICE_USER_ID: ${{ secrets.NOETIS_CRAWL_SERVICE_USER_ID }}
+          NOETIS_CRAWL_ENDPOINT: https://noetis-intelligence-2-noetis.vercel.app/internal/crawl
   research:
     if: vars.NOETIS_RESEARCH_WORKER_ENABLED == 'true'
     runs-on: ubuntu-latest

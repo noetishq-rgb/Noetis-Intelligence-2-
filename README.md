@@ -2,11 +2,11 @@
 
 An internal marketing-intelligence dashboard with a real-data Brand Brain onboarding API, versioned human review and tenant-isolated PostgreSQL storage.
 
-This repository combines the existing frontend, FastAPI backend, all 32 migrations, strict output schemas, tests, deployment configuration and bounded workers. Production secrets, database dumps, private review downloads and uploaded briefs are excluded.
+This repository combines the existing frontend, FastAPI backend, all 33 migrations, strict output schemas, tests, deployment configuration and bounded workers. Production secrets, database dumps, private review downloads and uploaded briefs are excluded.
 
 ## Deployment architecture
 
-- **GitHub**: this source repository, CI tests and scheduled/manual bounded worker runs.
+- **GitHub**: this source repository, CI tests, and a signed scheduled/manual invocation of the hosted public-capture worker. Research/planning workers remain explicitly disabled until configured.
 - **Supabase PostgreSQL**: private `mi`, `identity` and `mi_meta` schemas, custom API/worker logins, forced row-level security and immutable artifacts. Browser code never receives database credentials or a service-role key.
 - **Vercel**: the Python FastAPI application and static frontend on the same origin. The entrypoint is `vercel_entry:app` and the initial landing view is Brand Brain.
 
@@ -20,7 +20,7 @@ Use `/owner` for the private Owner Console and `/login` for client sign-in. The 
 
 Brand Brain uses authenticated server drafts, actual crawl/research job status, recorded source snapshots, finding reviews, comments and confirmed versions. It never fills its intelligence screens from sample dashboard fixtures.
 
-The other marketing dashboard views retain clearly labeled illustrative performance data until their reporting integrations are connected. Deploying the infrastructure alone does not establish real Meta spend, Search Console rankings, email results or revenue. No provider is enabled by default.
+The other marketing dashboard views retain clearly labeled illustrative performance data until their reporting integrations are connected. Deploying the infrastructure alone does not establish real Meta spend, Search Console rankings, email results or revenue. No paid provider is enabled by default. The SuperYou pilot has a separate bounded public-capture worker.
 
 ## Setup
 
@@ -39,7 +39,7 @@ The other marketing dashboard views retain clearly labeled illustrative performa
 7. Provision separate bound service identities for that brand using `crawl-service`, `research-service` and `planning-service`. Store the respective URLs and UUIDs in GitHub encrypted secrets. The existing provisioner prevents an API login from becoming a worker service.
 8. Enable only the worker repository variables you intend to run. `Bounded research workers` supports manual dispatch and a five-minute schedule. Each worker uses durable database leases, drains currently available work for a bounded period and stops. Schedules can be delayed by GitHub; immediate runs can be dispatched manually.
 
-For local development, use `uvicorn vercel_entry:app --host 127.0.0.1 --port 8000`. This runs the same origin and role checks as deployment. Migrations and infinite worker loops do not execute inside web requests.
+For local development, use `uvicorn vercel_entry:app --host 127.0.0.1 --port 8000`. This runs the same origin and role checks as deployment. Migrations and infinite worker loops do not execute inside web requests. Public capture can run one bounded job per hosted invocation using a dedicated brand-bound login. The scheduled invoker uses GitHub OIDC and contains no database secrets.
 
 ## GitHub worker configuration
 
@@ -64,3 +64,11 @@ python -m pytest -q
 CI creates a disposable PostgreSQL 17 database with a non-superuser managed migration owner, applies and replays all migrations, provisions a non-bypass API login, and runs the backend suite. Test credentials in CI are deliberately synthetic and are not deployment defaults.
 
 Operational details: [Brand Brain](docs/BRAND_BRAIN.md), [security](docs/SECURITY.md), [research operations](docs/RESEARCH_OPERATIONS.md), [planning API](docs/PLANNING_API.md). Current contract: `docs/openapi-brand-brain.json`.
+
+## Website capture pilot
+
+An owner can queue public capture from a Brand Brain session using the official website URL, even while client onboarding is a draft. `/sessions/{session_id}/capture` is versioned and idempotent; `/v1/brands/{brand_id}/brain/capture/run` runs one bounded pass for an owner. GitHub schedules the same service through `/internal/crawl`, which requires a verified GitHub RS256 token for this exact repository, main branch, workflow and audience. The configured worker has a separate `mi_app` login bound to one brand, and runs no model calls. Source pages, hashes, crawl errors and profile observations persist in Supabase.
+
+Production variables: `MI_CRAWL_WORKER_DATABASE_URL`, `MI_CRAWL_SERVICE_USER_ID`, `MI_CRAWL_BRAND_ID`, `MI_CRAWL_SCHEDULER_ENABLED`. The first pilot is SuperYou. More brands require their own bound worker credentials. Other GitHub worker secrets in the table above apply only to the separately configured research/planning jobs or standalone legacy crawler.
+
+Client category/objectives remain blank until supplied. The client must submit setup before an owner organizes the captured evidence into a review draft. Website statements are attributed observations; market, audience, budget and strategy claims stay unverified. Model provider credentials, pricing, cost caps and semantic review are separate requirements for broader research. Email automation remains on hold.

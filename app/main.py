@@ -486,6 +486,9 @@ app.include_router(brain_router)
 from app.client_access import router as client_access_router
 app.include_router(client_access_router)
 
+from app.crawl_scheduler import router as crawl_scheduler_router
+app.include_router(crawl_scheduler_router)
+
 # Optional same-origin frontend, using existing API sessions; never serves source/config directories.
 if settings().ui_directory:
     from fastapi.staticfiles import StaticFiles

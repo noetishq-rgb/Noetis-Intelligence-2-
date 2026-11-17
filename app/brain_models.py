@@ -3,6 +3,7 @@ from typing import Annotated, Literal
 from uuid import UUID
 from pydantic import Field, model_validator
 from app.models import StrictModel, PresenceLink, ShortText, Citation
+from pydantic import HttpUrl
 
 CHAPTERS={'business':'Business & Offerings','audience':'Audience Intelligence','positioning':'Brand Positioning','market':'Market Intelligence','presence':'Marketing Presence','objectives':'Business Objectives'}
 Provenance=Literal['publicly_observed','ai_inferred','founder_provided','founder_confirmed','unverified']
@@ -37,6 +38,11 @@ class SessionSave(StrictModel):
 
 class VersionAction(StrictModel):
     expected_version: Annotated[int,Field(ge=1)]
+
+
+class CaptureStart(VersionAction):
+    website_url: HttpUrl | None = None
+    max_pages: Annotated[int,Field(ge=1,le=8)] = 5
 
 class FindingReview(StrictModel):
     expected_sequence: Annotated[int,Field(ge=0)]

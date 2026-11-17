@@ -1,0 +1,39 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "expected_version": {
+      "minimum": 1,
+      "title": "Expected Version",
+      "type": "integer"
+    },
+    "website_url": {
+      "anyOf": [
+        {
+          "format": "uri",
+          "maxLength": 2083,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Website Url"
+    },
+    "max_pages": {
+      "default": 5,
+      "maximum": 8,
+      "minimum": 1,
+      "title": "Max Pages",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "expected_version"
+  ],
+  "title": "CaptureStart",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:marketing-intelligence:brain-capture-start:1.0"
+}

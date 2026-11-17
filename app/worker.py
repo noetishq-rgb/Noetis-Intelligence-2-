@@ -1,5 +1,6 @@
 """Durable PostgreSQL queue. Run one process per narrow service principal."""
 import argparse
+from contextvars import ContextVar
 from datetime import datetime, timezone
 import logging
 import time
@@ -13,12 +14,14 @@ from app.services.extraction import extract_profile
 from app.workflow import GateContext
 
 logger = logging.getLogger("marketing_intelligence.worker")
+_bound_database_url = ContextVar('crawl_database_url',default=None)
 
 
 def transaction(actor):
     config = settings()
+    override = _bound_database_url.get()
     url = config.worker_database_url or config.database_url
-    return database_transaction(actor, url.get_secret_value())
+    return database_transaction(actor, override or url.get_secret_value())
 
 
 def validate_service(connection, actor):
@@ -120,7 +123,15 @@ def fail(actor, job, code, traces, validation=False):
     return True
 
 
-def run_once(actor: UUID, crawler=crawl) -> bool:
+def run_once(actor: UUID, crawler=crawl, *, database_url: str | None = None) -> bool:
+    token = _bound_database_url.set(database_url)
+    try:
+        return _run_once(actor,crawler)
+    finally:
+        _bound_database_url.reset(token)
+
+
+def _run_once(actor: UUID, crawler=crawl) -> bool:
     job = claim(actor)
     if job is None:
         return False

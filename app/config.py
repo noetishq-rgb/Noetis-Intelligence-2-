@@ -1,5 +1,6 @@
 from functools import lru_cache
 from datetime import date, datetime
+from uuid import UUID
 
 from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -20,6 +21,10 @@ class Settings(BaseSettings):
     bootstrap_expires_at: datetime | None = None
     bootstrap_organization: str = "NOETIS"
     service_user_id: str | None = None
+    crawl_worker_database_url: SecretStr | None = None
+    crawl_service_user_id: UUID | None = None
+    crawl_brand_id: UUID | None = None
+    crawl_scheduler_enabled: bool = False
     ui_directory: str | None = None
     model_provider: str = "disabled"
     allow_model_calls: bool = False
