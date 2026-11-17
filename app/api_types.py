@@ -9,6 +9,8 @@ class UserView(StrictModel):
     id: UUID
     email: EmailStr
     full_name: str
+    requires_password_change: bool = False
+    managed_client: bool = False
 
 
 class OrganizationView(StrictModel):

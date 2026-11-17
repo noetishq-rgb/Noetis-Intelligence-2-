@@ -57,7 +57,7 @@ def issue_tokens(connection, user_id: UUID, family_id: UUID | None = None) -> To
     return TokenPair(access_token=encoded, refresh_token=refresh, expires_in=config.access_minutes * 60)
 
 
-def current_user(credentials: HTTPAuthorizationCredentials | None = Depends(bearer)) -> dict:
+def current_user(request: Request, credentials: HTTPAuthorizationCredentials | None = Depends(bearer)) -> dict:
     if credentials is None:
         raise HTTPException(401, "Authentication required", headers={"WWW-Authenticate": "Bearer"})
     config = settings()
@@ -70,10 +70,13 @@ def current_user(credentials: HTTPAuthorizationCredentials | None = Depends(bear
         raise HTTPException(401, "Invalid or expired access token")
     with transaction(actor) as connection:
         session = connection.execute("SELECT id FROM identity.sessions WHERE id=%s AND user_id=%s AND revoked_at IS NULL AND consumed_at IS NULL AND expires_at>now()", (session_id, actor)).fetchone()
-        user = connection.execute("SELECT id,email,full_name,disabled,is_service FROM identity.users WHERE id=%s", (actor,)).fetchone()
+        user = connection.execute("SELECT id,email,full_name,disabled,is_service,requires_password_change,managed_by_organization_id FROM identity.users WHERE id=%s", (actor,)).fetchone()
         if not session or not user or user["disabled"] or user["is_service"]:
             raise HTTPException(401, "Session no longer active")
         user["session_id"] = session_id
+        user['managed_client'] = user['managed_by_organization_id'] is not None
+        if user['requires_password_change'] and request.url.path not in {'/v1/me','/v1/auth/password','/v1/auth/logout'}:
+            raise HTTPException(403,'Change your temporary password to continue')
         return user
 
 

@@ -3,6 +3,7 @@ import sys
 from pathlib import Path
 root = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(root))
+from app.client_access import ClientCreate, ClientView, AccountAction, PasswordChange
 from app.models import SCHEMA_MODELS, OnboardingInput
 from app.research_models import ResearchDossierV11, ResearchStart, ResearchReview, PromptCompile, ResearchValidationReport
 from app.main import app
@@ -22,6 +23,10 @@ for name, model in {**SCHEMA_MODELS, "onboarding-input": OnboardingInput}.items(
     schema["$id"] = "urn:marketing-intelligence:" + name + ":1.0"
     write(root / "schemas" / (name + ".schema.json"), schema)
 for name, model, version in [
+    ("client-create", ClientCreate, "1.0"),
+    ("client-account", ClientView, "1.0"),
+    ("client-access-action", AccountAction, "1.0"),
+    ("password-change", PasswordChange, "1.0"),
     ("brand-profile-v1.1", BrandProfileV11, "1.1"),
     ("brain-setup", SetupDraft, "1.0"),
     ("brain-finding-review", FindingReview, "1.0"),

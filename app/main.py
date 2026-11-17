@@ -5,7 +5,7 @@ import hmac
 import secrets
 from uuid import UUID, uuid4
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 import psycopg
@@ -24,6 +24,7 @@ from app.repository import latest_profile, lock_key, payload_hash, persist_profi
 from app.services.crawl import CrawlError, validate_url
 from app.services.extraction import extract_profile, merge_onboarding
 from app.workflow import GateContext, TransitionError
+from app.session_cookie import set_session_cookie, clear_session_cookie
 
 from app.models import BrandProfileV11 as BrandProfile
 
@@ -100,17 +101,18 @@ def create_founder(connection, body, user_id, organization_id):
 
 
 @app.post("/v1/auth/register", response_model=TokenPair, status_code=201, tags=["Authentication"])
-def register(body: Signup, request: Request):
+def register(body: Signup, request: Request, response: Response):
     if not settings().allow_signup:
         raise HTTPException(404, "Registration unavailable")
     user_id, organization_id = uuid4(), uuid4()
     with transaction(user_id) as connection:
         tokens = create_founder(connection, body, user_id, organization_id)
+    set_session_cookie(response,tokens)
     return tokens
 
 
 @app.post("/v1/auth/activate-founder", response_model=TokenPair, status_code=201, tags=["Authentication"])
-def activate_founder(body: FounderActivation, request: Request):
+def activate_founder(body: FounderActivation, request: Request, response: Response):
     config = settings()
     if not config.bootstrap_email or not config.bootstrap_token_sha256 or not config.bootstrap_expires_at:
         raise HTTPException(404, "Founder activation unavailable")
@@ -138,11 +140,12 @@ def activate_founder(body: FounderActivation, request: Request):
                 signup = Signup(email=body.email, full_name=body.full_name, password=body.password, organization_name=config.bootstrap_organization)
                 tokens = create_founder(connection, signup, actor, organization_id)
     if failure:raise HTTPException(*failure)
+    set_session_cookie(response,tokens)
     return tokens
 
 
 @app.post("/v1/auth/token", response_model=TokenPair, tags=["Authentication"])
-def login(body: Login, request: Request):
+def login(body: Login, request: Request, response: Response):
     tokens, throttled = None, False
     address = str(body.email).lower()
     with transaction() as connection:
@@ -163,11 +166,12 @@ def login(body: Login, request: Request):
         raise HTTPException(429, "Try again later", headers={"Retry-After": "900"})
     if tokens is None:
         raise HTTPException(401, "Invalid email or password")
+    set_session_cookie(response,tokens)
     return tokens
 
 
 @app.post("/v1/auth/refresh", response_model=TokenPair, tags=["Authentication"])
-def refresh(body: RefreshRequest):
+def refresh(body: RefreshRequest, response: Response):
     tokens = None
     with transaction() as connection:
         session = connection.execute("SELECT * FROM identity.refresh_lookup(%s)", (digest(body.refresh_token),)).fetchone()
@@ -184,13 +188,15 @@ def refresh(body: RefreshRequest):
                 auth_event(connection, "refresh_rotated", True, session["user_id"], session_id=session["id"])
     if tokens is None:
         raise HTTPException(401, "Invalid or expired refresh token")
+    set_session_cookie(response,tokens)
     return tokens
 
 
 @app.post("/v1/auth/logout", response_model=StatusView, tags=["Authentication"])
-def logout(user=Depends(current_user), connection=Depends(actor_transaction)):
+def logout(response: Response, user=Depends(current_user), connection=Depends(actor_transaction)):
     connection.execute("UPDATE identity.sessions SET revoked_at=now() WHERE family_id=(SELECT family_id FROM identity.sessions WHERE id=%s)", (user["session_id"],))
     auth_event(connection, "logout", True, user["id"], session_id=user["session_id"])
+    clear_session_cookie(response)
     return StatusView(status="logged_out")
 
 
@@ -244,6 +250,8 @@ def accept_invitation(body: AcceptInvitation):
 
 @app.post("/v1/me/accept-invitation", response_model=AcceptedInvitation, tags=["Membership"])
 def accept_existing_invitation(body: AcceptExistingInvitation, user=Depends(current_user), connection=Depends(actor_transaction)):
+    if user.get('managed_client'):
+        raise HTTPException(403,'This login is dedicated to its assigned brand workspace')
     row = connection.execute("SELECT identity.accept_invite(%s) AS brand_id", (digest(body.invitation_token),)).fetchone()
     auth_event(connection, "invitation_accepted", True, user["id"])
     return AcceptedInvitation(brand_id=row["brand_id"])
@@ -474,6 +482,9 @@ app.include_router(planning_router)
 
 from app.brain_api import router as brain_router
 app.include_router(brain_router)
+
+from app.client_access import router as client_access_router
+app.include_router(client_access_router)
 
 # Optional same-origin frontend, using existing API sessions; never serves source/config directories.
 if settings().ui_directory:

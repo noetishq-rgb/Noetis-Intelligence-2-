@@ -2,7 +2,7 @@
 
 An internal marketing-intelligence dashboard with a real-data Brand Brain onboarding API, versioned human review and tenant-isolated PostgreSQL storage.
 
-This repository combines the existing frontend, FastAPI backend, all 31 migrations, strict output schemas, tests, deployment configuration and bounded workers. Production secrets, database dumps, private review downloads and uploaded briefs are excluded.
+This repository combines the existing frontend, FastAPI backend, all 32 migrations, strict output schemas, tests, deployment configuration and bounded workers. Production secrets, database dumps, private review downloads and uploaded briefs are excluded.
 
 ## Deployment architecture
 
@@ -11,6 +11,10 @@ This repository combines the existing frontend, FastAPI backend, all 31 migratio
 - **Vercel**: the Python FastAPI application and static frontend on the same origin. The entrypoint is `vercel_entry:app` and the initial landing view is Brand Brain.
 
 The application keeps its existing JWT/Argon2 authentication and brand permissions. It does not replace them with Supabase Auth or reuse the users/tables of an older dashboard implicitly. Supabase's `public` schema can contain an earlier application and is not part of this migration history.
+
+## Owner and client access
+
+Use `/owner` for the private Owner Console and `/login` for client sign-in. The owner issues a dedicated login and empty workspace; clients choose their own password and supply their brand details themselves. Returning browser sessions use a Secure HttpOnly cookie, and resets/suspensions revoke existing access. No provider call is needed to complete onboarding. See the [operating guide](docs/CLIENT_ACCESS_GUIDE.md).
 
 ## What live data means
 

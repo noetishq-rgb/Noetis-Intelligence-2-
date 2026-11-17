@@ -1,0 +1,69 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "format": "uuid",
+      "title": "Id",
+      "type": "string"
+    },
+    "brand_id": {
+      "format": "uuid",
+      "title": "Brand Id",
+      "type": "string"
+    },
+    "brand_name": {
+      "title": "Brand Name",
+      "type": "string"
+    },
+    "email": {
+      "format": "email",
+      "title": "Email",
+      "type": "string"
+    },
+    "full_name": {
+      "title": "Full Name",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "active",
+        "suspended"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "requires_password_change": {
+      "title": "Requires Password Change",
+      "type": "boolean"
+    },
+    "onboarding_status": {
+      "enum": [
+        "not_started",
+        "draft",
+        "submitted"
+      ],
+      "title": "Onboarding Status",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "brand_id",
+    "brand_name",
+    "email",
+    "full_name",
+    "status",
+    "requires_password_change",
+    "onboarding_status",
+    "created_at"
+  ],
+  "title": "ClientView",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:marketing-intelligence:client-account:1.0"
+}

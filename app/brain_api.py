@@ -39,7 +39,7 @@ def create_session(brand_id:UUID,body:SetupDraft,user=Depends(current_user),conn
     b=access(connection,brand_id,True);lock_key(connection,'brain:'+str(brand_id))
     current=connection.execute("SELECT * FROM mi.brand_onboarding_sessions WHERE brand_id=%s AND status='draft' ORDER BY created_at DESC LIMIT 1",(brand_id,)).fetchone()
     if current:return current
-    job=connection.execute("SELECT id FROM mi.jobs WHERE brand_id=%s AND kind='website_crawl' ORDER BY created_at DESC LIMIT 1",(brand_id,)).fetchone()
+    job=connection.execute("SELECT id FROM mi.jobs WHERE brand_id=%s AND kind='website_crawl' ORDER BY created_at DESC LIMIT 1",(brand_id,)).fetchone() if bscope(connection,brand_id,'internal:read') else None
     return connection.execute('INSERT INTO mi.brand_onboarding_sessions(organization_id,brand_id,draft,crawl_job_id,created_by) VALUES(%s,%s,%s,%s,%s) RETURNING *',(b['organization_id'],brand_id,Jsonb(body.model_dump(mode='json')),job['id'] if job else None,user['id'])).fetchone()
 
 
@@ -63,8 +63,11 @@ def submit(brand_id:UUID,session_id:UUID,body:VersionAction,user=Depends(current
     if old['status']=='submitted':return old
     try:SetupDraft.model_validate(old['draft']).require_complete()
     except ValueError as exc:raise HTTPException(422,str(exc))
-    # Initial workspace creation has already queued the real crawl. Do not start an extra paid run.
-    if not old['crawl_job_id']:raise HTTPException(409,'An authorized team member must start the existing public-capture workflow')
+    # Owner-issued empty workspaces accept client inputs before provider setup.
+    if not old['crawl_job_id']:
+        if not b['intake'].get('client_onboarding'):
+            raise HTTPException(409,'An authorized team member must start the existing public-capture workflow')
+        connection.execute('SELECT mi.submit_client_setup(%s,%s)',(brand_id,Jsonb(old['draft'])))
     return connection.execute("UPDATE mi.brand_onboarding_sessions SET status='submitted',version=version+1,updated_at=now() WHERE id=%s AND brand_id=%s RETURNING *",(session_id,brand_id)).fetchone()
 
 
@@ -88,10 +91,11 @@ def progress(brand_id:UUID,session_id:UUID,connection=Depends(actor_transaction)
     if not v and bscope(connection,brand_id,'internal:read'):
         rows=connection.execute('SELECT source_id,url,title,created_at FROM mi.crawl_pages WHERE brand_id=%s AND job_id=%s ORDER BY created_at',(brand_id,s['crawl_job_id'])).fetchall()
         sources=[{'source_id':r['source_id'],'url':r['url'],'publisher':r['title'],'accessed_at':r['created_at'],'access_limitations':['Public HTML; underlying website claims require review.']} for r in rows]
-    state='created' if s['status']=='draft' else 'failed' if failed or research_failed else 'completed' if v and research_done else 'awaiting_input' if done else 'running' if job and job['status']=='running' else 'cancelled' if job and job['status']=='cancelled' else 'queued'
+    waiting_configuration=s['status']=='submitted' and not job
+    state='created' if s['status']=='draft' else 'awaiting_configuration' if waiting_configuration else 'failed' if failed or research_failed else 'completed' if v and research_done else 'awaiting_input' if done else 'running' if job and job['status']=='running' else 'cancelled' if job and job['status']=='cancelled' else 'queued'
     return {'session_id':s['id'],'state':state,'capture_job':job,'research_job':research,'stages':stages,'sources':sources,'source_count':len(sources),'version_id':v['id'] if v else None,
         'can_synthesise':done and bscope(connection,brand_id,'internal:read'),'can_retry':failed and bscope(connection,brand_id,'crawl:run'),
-        'activity':'The research job failed. Review the recorded error and existing workflow gates before requesting another run.' if research_failed else 'The existing research worker is running; its output remains unconfirmed.' if research and research['status']=='running' else 'Captured public pages are ready for review. Audience and market research require the existing confirmed intake, provider and explicit research start.' if done else 'Waiting for the existing public-capture worker.' if not failed else 'Public capture failed; review access limitations before retrying.','error':research['last_error'] if research_failed else job['last_error'] if job else None}
+        'activity':'Your brand details are saved. Your agency can review them now; research and API connections will be configured separately.' if waiting_configuration else 'The research job failed. Review the recorded error and existing workflow gates before requesting another run.' if research_failed else 'The existing research worker is running; its output remains unconfirmed.' if research and research['status']=='running' else 'Captured public pages are ready for review. Audience and market research require the existing confirmed intake, provider and explicit research start.' if done else 'Waiting for the existing public-capture worker.' if not failed else 'Public capture failed; review access limitations before retrying.','error':research['last_error'] if research_failed else job['last_error'] if job else None}
 
 
 def bscope(c,bid,scope):return c.execute('SELECT mi.has_brand_scope(%s,%s) AS ok',(bid,scope)).fetchone()['ok']

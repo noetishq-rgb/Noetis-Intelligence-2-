@@ -1,0 +1,47 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "brand_name": {
+      "maxLength": 300,
+      "minLength": 1,
+      "title": "Brand Name",
+      "type": "string"
+    },
+    "email": {
+      "format": "email",
+      "title": "Email",
+      "type": "string"
+    },
+    "full_name": {
+      "maxLength": 300,
+      "minLength": 1,
+      "title": "Full Name",
+      "type": "string"
+    },
+    "temporary_password": {
+      "anyOf": [
+        {
+          "format": "password",
+          "maxLength": 128,
+          "minLength": 12,
+          "type": "string",
+          "writeOnly": true
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Temporary Password"
+    }
+  },
+  "required": [
+    "brand_name",
+    "email",
+    "full_name"
+  ],
+  "title": "ClientCreate",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:marketing-intelligence:client-create:1.0"
+}

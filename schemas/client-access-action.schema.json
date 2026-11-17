@@ -1,0 +1,21 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "action": {
+      "enum": [
+        "suspend",
+        "resume",
+        "reset_password"
+      ],
+      "title": "Action",
+      "type": "string"
+    }
+  },
+  "required": [
+    "action"
+  ],
+  "title": "AccountAction",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:marketing-intelligence:client-access-action:1.0"
+}
