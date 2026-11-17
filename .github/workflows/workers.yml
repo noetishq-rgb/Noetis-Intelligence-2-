@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
-    paths: ['.github/workflows/workers.yml', 'app/crawl_scheduler.py']
+    paths: ['.github/workflows/workers.yml', 'app/crawl_scheduler.py', 'scripts/run_hosted_crawl.py']
 permissions:
   contents: read
 concurrency:

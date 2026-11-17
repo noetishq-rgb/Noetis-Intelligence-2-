@@ -18,13 +18,14 @@ def main():
     params=dict(parse_qsl(url.query));params['audience']=AUDIENCE
     request=Request(urlunsplit((url.scheme,url.netloc,url.path,urlencode(params),'')),headers={'Authorization':'Bearer '+credential})
     with urlopen(request,timeout=20) as response:token=json.load(response)['value']
-    for attempt in range(6):
+    for attempt in range(12):
         try:
             request=Request(endpoint,data=b'{}',method='POST',headers={'Authorization':'Bearer '+token,'Content-Type':'application/json'})
             with urlopen(request,timeout=150) as response:result=json.load(response)
             print(json.dumps({'processed':result['processed'],'job_status':(result.get('job') or {}).get('status','idle')}));return
         except HTTPError as error:
-            if error.code not in {404,503} or attempt==5:raise SystemExit('Hosted worker returned HTTP '+str(error.code))
+            # During a Git deployment, the previous static fallback answers POST with 405.
+            if error.code not in {404,405,503} or attempt==11:raise SystemExit('Hosted worker returned HTTP '+str(error.code))
             time.sleep(5)
         except Exception:
             raise SystemExit('Hosted worker did not return a confirmed response; a later pass will recover its durable lease')
