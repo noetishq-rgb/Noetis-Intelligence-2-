@@ -1,5 +1,5 @@
 from functools import lru_cache
-from datetime import date
+from datetime import date, datetime
 
 from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -15,6 +15,10 @@ class Settings(BaseSettings):
     access_minutes: int = Field(default=10, ge=1, le=15)
     refresh_days: int = Field(default=7, ge=1, le=30)
     allow_signup: bool = False
+    bootstrap_email: str | None = None
+    bootstrap_token_sha256: SecretStr | None = None
+    bootstrap_expires_at: datetime | None = None
+    bootstrap_organization: str = "NOETIS"
     service_user_id: str | None = None
     ui_directory: str | None = None
     model_provider: str = "disabled"

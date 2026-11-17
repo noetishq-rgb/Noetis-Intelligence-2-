@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 import logging
+import hmac
 import secrets
 from uuid import UUID, uuid4
 
@@ -17,7 +18,7 @@ from app.auth import (actor_transaction, auth_event, current_user, digest, issue
     password_hash, require_admin, require_brand, throttle, verify_password)
 from app.config import settings
 from app.db import check_runtime_role, set_actor, transaction
-from app.models import (BrandCreate, BrandProfile, CrawlRequest, InviteCreate, Login,
+from app.models import (BrandCreate, BrandProfile, CrawlRequest, FounderActivation, InviteCreate, Login,
     OnboardingInput, OnboardingSave, RefreshRequest, Signup, TokenPair, VersionRequest, WorkflowEvent)
 from app.repository import latest_profile, lock_key, payload_hash, persist_profile, transition, workflow_for_brand
 from app.services.crawl import CrawlError, validate_url
@@ -88,20 +89,55 @@ def health():
     return StatusView(status="ok")
 
 
+def create_founder(connection, body, user_id, organization_id):
+    connection.execute("INSERT INTO identity.users(id,email,full_name,password_hash) VALUES(%s,%s,%s,%s)",
+        (user_id, str(body.email).lower(), body.full_name, password_hash(body.password)))
+    connection.execute("INSERT INTO mi.organizations(id,name,owner_id) VALUES(%s,%s,%s)", (organization_id, body.organization_name, user_id))
+    connection.execute("INSERT INTO mi.organization_memberships(organization_id,user_id,role) VALUES(%s,%s,'founder')", (organization_id, user_id))
+    tokens = issue_tokens(connection, user_id)
+    auth_event(connection, "founder_registered", True, user_id)
+    return tokens
+
+
 @app.post("/v1/auth/register", response_model=TokenPair, status_code=201, tags=["Authentication"])
 def register(body: Signup, request: Request):
     if not settings().allow_signup:
         raise HTTPException(404, "Registration unavailable")
     user_id, organization_id = uuid4(), uuid4()
-    stored = password_hash(body.password)
     with transaction(user_id) as connection:
-        # Organization creation cannot confer rights in an existing organization.
-        connection.execute("INSERT INTO identity.users(id,email,full_name,password_hash) VALUES(%s,%s,%s,%s)",
-            (user_id, str(body.email).lower(), body.full_name, stored))
-        connection.execute("INSERT INTO mi.organizations(id,name,owner_id) VALUES(%s,%s,%s)", (organization_id, body.organization_name, user_id))
-        connection.execute("INSERT INTO mi.organization_memberships(organization_id,user_id,role) VALUES(%s,%s,'founder')", (organization_id, user_id))
-        tokens = issue_tokens(connection, user_id)
-        auth_event(connection, "founder_registered", True, user_id)
+        tokens = create_founder(connection, body, user_id, organization_id)
+    return tokens
+
+
+@app.post("/v1/auth/activate-founder", response_model=TokenPair, status_code=201, tags=["Authentication"])
+def activate_founder(body: FounderActivation, request: Request):
+    config = settings()
+    if not config.bootstrap_email or not config.bootstrap_token_sha256 or not config.bootstrap_expires_at:
+        raise HTTPException(404, "Founder activation unavailable")
+    now = datetime.now(timezone.utc)
+    expires = config.bootstrap_expires_at
+    valid = (expires.tzinfo is not None and expires > now and
+        str(body.email).lower() == config.bootstrap_email.lower() and
+        hmac.compare_digest(digest(body.token), config.bootstrap_token_sha256.get_secret_value()))
+    actor, organization_id = uuid4(), uuid4()
+    failure, tokens = None, None
+    with transaction(actor) as connection:
+        keys = throttle(connection, "founder-activation:" + str(body.email).lower(), request)
+        if not keys:
+            failure = (429, "Try activation again later")
+        elif not valid:
+            failure = (400, "Activation link is invalid or expired")
+            for key in keys:connection.execute("SELECT identity.record_attempt(%s,false)", (key,))
+            auth_event(connection, "founder_activation_rejected", False, subject=str(body.email))
+        else:
+            lock_key(connection, "founder-activation:" + config.bootstrap_email.lower())
+            existing = connection.execute("SELECT id FROM identity.login_lookup(%s)", (str(body.email).lower(),)).fetchone()
+            if existing:
+                failure = (409, "This founder account is already activated; sign in instead")
+            else:
+                signup = Signup(email=body.email, full_name=body.full_name, password=body.password, organization_name=config.bootstrap_organization)
+                tokens = create_founder(connection, signup, actor, organization_id)
+    if failure:raise HTTPException(*failure)
     return tokens
 
 

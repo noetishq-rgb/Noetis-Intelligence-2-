@@ -136,7 +136,9 @@ def test_no_actor_means_no_brands_or_private_password_access():
 def test_audit_chain_verifies_and_all_brand_tables_force_rls(api, agency, brand_factory, owner):
     brand_factory(agency)
     owner.execute("SET LOCAL timezone='UTC'")
-    records = owner.execute("SELECT a.*,entry_hash=encode(public.digest(convert_to((to_jsonb(a)-'entry_hash')::text,'UTF8'),'sha256'),'hex') AS verified FROM mi.audit_logs a WHERE organization_id=%s ORDER BY occurred_at,id", (agency["organization"],)).fetchall()
+    # Managed deployments keep crypto wrappers private; native pgcrypto stays public.
+    digest_schema = 'mi' if owner.execute("SELECT to_regprocedure('mi.digest(bytea,text)') AS f").fetchone()['f'] else 'public'
+    records = owner.execute(f"SELECT a.*,entry_hash=encode({digest_schema}.digest(convert_to((to_jsonb(a)-'entry_hash')::text,'UTF8'),'sha256'),'hex') AS verified FROM mi.audit_logs a WHERE organization_id=%s ORDER BY occurred_at,id", (agency["organization"],)).fetchall()
     assert records and all(row["verified"] for row in records)
     assert records[0]["previous_hash"] is None
     assert all(records[i]["previous_hash"] == records[i-1]["entry_hash"] for i in range(1, len(records)))

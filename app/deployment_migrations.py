@@ -26,10 +26,12 @@ def prepare_managed(c):
 
 
 def managed_sql(raw,name):
+    raw=raw.replace('public.digest','mi.digest')
     if name.startswith('001_'):
         marker='GRANT USAGE ON SCHEMA mi,identity TO mi_app,mi_guard;'
         if marker not in raw:raise RuntimeError('Unexpected initial migration; managed ownership setup needs review')
         raw=raw.replace(marker,marker+'\nGRANT CREATE ON SCHEMA mi TO mi_guard;',1)
+        raw=raw.replace('REVOKE CREATE ON SCHEMA public FROM PUBLIC;','-- Existing public schema privileges are preserved by the managed profile.')
     return raw
 
 
@@ -46,9 +48,11 @@ def finalize_managed(c):
         namespace=ext['nspname']
         c.execute(sql.SQL('GRANT USAGE ON SCHEMA {} TO mi_app,mi_guard').format(sql.Identifier(namespace)))
         for arg in ['bytea','text']:
-            if not c.execute('SELECT to_regprocedure(%s) AS value',(f'public.digest({arg},text)',)).fetchone()['value']:
+            if not c.execute('SELECT to_regprocedure(%s) AS value',(f'mi.digest({arg},text)',)).fetchone()['value']:
                 body=sql.SQL('SELECT {}.digest($1,$2)').format(sql.Identifier(namespace))
-                c.execute(sql.SQL('CREATE FUNCTION public.digest({},text) RETURNS bytea LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE SET search_path=pg_catalog AS {}').format(sql.SQL(arg),sql.Literal(body.as_string(c))))
+                c.execute(sql.SQL('CREATE FUNCTION mi.digest({},text) RETURNS bytea LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE SET search_path=pg_catalog AS {}').format(sql.SQL(arg),sql.Literal(body.as_string(c))))
+    c.execute('REVOKE EXECUTE ON FUNCTION mi.digest(bytea,text),mi.digest(text,text) FROM PUBLIC')
+    c.execute('GRANT EXECUTE ON FUNCTION mi.digest(bytea,text),mi.digest(text,text) TO mi_app,mi_guard')
     tables=c.execute("""SELECT n.nspname,c.relname FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
         WHERE n.nspname IN('mi','identity') AND c.relkind='r' AND c.relrowsecurity
         AND has_table_privilege('mi_guard',c.oid,'SELECT')""").fetchall()

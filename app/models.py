@@ -624,3 +624,9 @@ class WorkflowEvent(StrictModel):
 class ErrorResponse(StrictModel):
     detail: str
 
+
+class FounderActivation(StrictModel):
+    email: EmailStr
+    full_name: ShortText
+    password: Annotated[str, Field(min_length=12, max_length=128)]
+    token: Annotated[str, Field(min_length=32, max_length=200)]
