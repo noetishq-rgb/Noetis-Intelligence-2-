@@ -3,6 +3,12 @@ on:
   schedule:
     - cron: '*/5 * * * *'
   workflow_dispatch:
+    inputs:
+      research_pilot:
+        description: 'Explicit website-only pilot: status checks are free; run admits at most one generation.'
+        type: choice
+        options: [none, status, run]
+        default: none
   push:
     branches: [main]
     paths: ['.github/workflows/workers.yml', 'app/crawl_scheduler.py', 'app/worker.py', 'app/services/crawl.py', 'app/services/extraction.py', 'scripts/run_hosted_crawl.py']
@@ -26,6 +32,11 @@ jobs:
       - run: python scripts/run_hosted_crawl.py
         env:
           NOETIS_CRAWL_ENDPOINT: https://noetis-intelligence-2-noetis.vercel.app/internal/crawl
+      - name: Explicit research pilot
+        if: github.event_name == 'workflow_dispatch' && inputs.research_pilot != 'none'
+        run: python scripts/run_hosted_crawl.py
+        env:
+          NOETIS_RESEARCH_PILOT_ACTION: ${{ inputs.research_pilot }}
   research:
     if: vars.NOETIS_RESEARCH_WORKER_ENABLED == 'true'
     runs-on: ubuntu-latest

@@ -15,7 +15,7 @@ from app.services.research_prompt import compile_prompt
 from app.services.research_sources import collect
 from app.services.research_storage import evidence_rows, persist_evidence, persist_dossier
 from app.services.research_validation import evaluate_output
-from app.worker import transaction, validate_service, locked_job, save_traces
+from app.worker import transaction, validate_service, locked_job, save_traces, _bound_database_url
 from app.workflow import GateContext
 
 
@@ -201,7 +201,15 @@ def finish(actor,job,dispatch,request,result,profile,evidence,traces,latency):
         connection.execute("UPDATE mi.jobs SET status=%s,last_error=%s,available_at=now()+interval '2 seconds',lease_id=NULL,lease_expires_at=NULL WHERE id=%s AND brand_id=%s", (status,code,job['id'],job['brand_id']))
 
 
-def run_once(actor: UUID, *, provider=None, collector=collect):
+def run_once(actor: UUID, *, provider=None, collector=collect, database_url=None):
+    token = _bound_database_url.set(database_url)
+    try:
+        return _run_once(actor, provider=provider, collector=collector)
+    finally:
+        _bound_database_url.reset(token)
+
+
+def _run_once(actor: UUID, *, provider=None, collector=collect):
     job=claim(actor)
     if not job:
         return False

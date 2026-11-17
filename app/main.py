@@ -491,6 +491,8 @@ app.include_router(client_access_router)
 
 from app.crawl_scheduler import router as crawl_scheduler_router
 app.include_router(crawl_scheduler_router)
+from app.research_pilot import router as research_pilot_router
+app.include_router(research_pilot_router)
 
 # Optional same-origin frontend, using existing API sessions; never serves source/config directories.
 if settings().ui_directory:

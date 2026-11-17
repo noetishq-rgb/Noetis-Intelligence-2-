@@ -43,6 +43,10 @@ class Settings(BaseSettings):
     model_output_paise_per_million: int | None = Field(default=None, ge=0)
     pricing_as_of: str | None = None
     research_max_cost_paise: int | None = Field(default=None, ge=1)
+    research_pilot_enabled: bool = False
+    research_pilot_brand_id: UUID | None = None
+    research_pilot_service_user_id: UUID | None = None
+    research_pilot_worker_database_url: SecretStr | None = None
 
     @model_validator(mode="after")
     def secure_secret(self):

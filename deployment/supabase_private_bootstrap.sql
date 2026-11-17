@@ -2168,3 +2168,22 @@ CREATE OR REPLACE FUNCTION mi.submit_client_setup(bid uuid,setup jsonb) RETURNS 
 
 REVOKE CREATE ON SCHEMA mi FROM mi_guard;
 INSERT INTO mi_meta.schema_migrations(name,sha256,profile,effective_sha256) VALUES('033_canonical_client_capture_intake.sql','0867748eb25925591c7b3a726807d07dfdeef1f922bd93b4f984d90979f16b73','supabase','789ad538e5f438a735a5715d7cd0e114d31d6238fe5c79c950e7ec05b096beaf');
+
+BEGIN;
+-- A research worker may reuse public captures only inside its assigned brand.
+-- This grants no crawl insertion, job execution or cross-brand access.
+CREATE POLICY research_capture_read ON mi.crawl_pages FOR SELECT TO mi_app
+ USING(mi.has_brand_scope(brand_id,'research:run'));
+COMMIT;
+
+INSERT INTO mi_meta.schema_migrations(name,sha256,profile,effective_sha256) VALUES('034_research_saved_capture_reads.sql','af9ec6b9205d28f690e09a4bb48c8afd2ba482a8feb9789c48be38fe6f77b5c8','supabase','0968cfb1b8e6bf9f577186013b714c9c5048a52157cef0f12bd99cc88ac97f7e');
+
+BEGIN;
+-- Let a brand-scoped research worker report its own recorded token usage.
+CREATE POLICY research_usage_read ON mi.prompt_runs FOR SELECT TO mi_app
+ USING(mi.has_brand_scope(brand_id,'research:run') AND EXISTS(
+  SELECT 1 FROM mi.model_dispatches d WHERE d.id=prompt_runs.id AND d.brand_id=prompt_runs.brand_id
+ ));
+COMMIT;
+
+INSERT INTO mi_meta.schema_migrations(name,sha256,profile,effective_sha256) VALUES('035_research_usage_reads.sql','7ce75d482c57ebaddd5c824c1c5152bfe9f545c65012676612376538544c941c','supabase','4c8d80f360ce89ebf23396bd727e76173d54ec0da5ff5d999ee81b604b4a5f60');

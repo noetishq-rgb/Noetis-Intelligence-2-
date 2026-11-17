@@ -10,6 +10,9 @@ ENDPOINT='https://noetis-intelligence-2-noetis.vercel.app/internal/crawl'
 def main():
     endpoint=os.environ.get('NOETIS_CRAWL_ENDPOINT',ENDPOINT)
     if endpoint!=ENDPOINT:raise SystemExit('Unexpected crawl endpoint')
+    action=os.environ.get('NOETIS_RESEARCH_PILOT_ACTION')
+    if action and (action not in {'status','run'} or os.environ.get('GITHUB_EVENT_NAME')!='workflow_dispatch'):
+        raise SystemExit('Research pilot requires an explicit workflow dispatch')
     source=os.environ.get('ACTIONS_ID_TOKEN_REQUEST_URL');credential=os.environ.get('ACTIONS_ID_TOKEN_REQUEST_TOKEN')
     if not source or not credential:raise SystemExit('Run from the authorized GitHub Actions workflow')
     revision=os.environ.get('GITHUB_SHA')
@@ -31,9 +34,10 @@ def main():
     with urlopen(request,timeout=20) as response:token=json.load(response)['value']
     for attempt in range(12):
         try:
-            request=Request(endpoint,data=b'{}',method='POST',headers={'Authorization':'Bearer '+token,'Content-Type':'application/json'})
+            target=endpoint.replace('/internal/crawl','/internal/research-pilot') if action else endpoint
+            request=Request(target,data=json.dumps({'action':action}).encode() if action else b'{}',method='POST',headers={'Authorization':'Bearer '+token,'Content-Type':'application/json'})
             with urlopen(request,timeout=150) as response:result=json.load(response)
-            print(json.dumps({'processed':result['processed'],'job_status':(result.get('job') or {}).get('status','idle')}));return
+            print(json.dumps(result if action else {'processed':result['processed'],'job_status':(result.get('job') or {}).get('status','idle')}));return
         except HTTPError as error:
             # During a Git deployment, the previous static fallback answers POST with 405.
             if error.code not in {404,405,503} or attempt==11:

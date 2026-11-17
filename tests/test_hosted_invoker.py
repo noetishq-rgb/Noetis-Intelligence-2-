@@ -35,3 +35,21 @@ def test_invoker_never_retries_an_authorization_failure(monkeypatch):
     monkeypatch.setattr(invoker,'urlopen',open_request)
     with pytest.raises(SystemExit,match='403'):invoker.main()
     assert len(calls)==2
+
+
+def test_explicit_pilot_invoker_uses_protected_route_and_never_logs_token(monkeypatch,capsys):
+    monkeypatch.delenv('GITHUB_SHA',raising=False)
+    monkeypatch.setenv('NOETIS_RESEARCH_PILOT_ACTION','status')
+    monkeypatch.setenv('GITHUB_EVENT_NAME','workflow_dispatch')
+    monkeypatch.setenv('ACTIONS_ID_TOKEN_REQUEST_URL','https://token.actions.githubusercontent.com/fixture')
+    monkeypatch.setenv('ACTIONS_ID_TOKEN_REQUEST_TOKEN','fixture-request-token')
+    calls=[]
+    def open_request(request,timeout):
+        calls.append(request)
+        if len(calls)==1:return io.BytesIO(b'{"value":"fixture-signed-token"}')
+        assert request.full_url.endswith('/internal/research-pilot')
+        assert json.loads(request.data)=={'action':'status'}
+        return io.BytesIO(b'{"processed":false,"ready":false}')
+    monkeypatch.setattr(invoker,'urlopen',open_request)
+    invoker.main()
+    assert len(calls)==2 and 'fixture-signed-token' not in capsys.readouterr().out

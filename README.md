@@ -2,7 +2,7 @@
 
 An internal marketing-intelligence dashboard with a real-data Brand Brain onboarding API, versioned human review and tenant-isolated PostgreSQL storage.
 
-This repository combines the existing frontend, FastAPI backend, all 33 migrations, strict output schemas, tests, deployment configuration and bounded workers. Production secrets, database dumps, private review downloads and uploaded briefs are excluded.
+This repository combines the existing frontend, FastAPI backend, all 35 migrations, strict output schemas, tests, deployment configuration and bounded workers. Production secrets, database dumps, private review downloads and uploaded briefs are excluded.
 
 ## Deployment architecture
 

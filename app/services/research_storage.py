@@ -23,8 +23,9 @@ def persist_evidence(connection, job, source):
     source_id = uuid4()
     connection.execute("""INSERT INTO mi.research_sources(id,organization_id,brand_id,url,publisher,published_at,accessed_at,
         geographic_scope,applicability_to_india,access_limitations,content_sha256,provenance)
-        VALUES(%s,%s,%s,%s,%s,%s,now(),%s,%s,%s,%s,%s)""",
+        VALUES(%s,%s,%s,%s,%s,%s,coalesce(%s,now()),%s,%s,%s,%s,%s)""",
         (source_id, job["organization_id"], job["brand_id"], source.url, source.publisher, source.published_at,
+         source.accessed_at,
          source.seed.geographic_scope, source.seed.applicability_to_india, Jsonb(source.limitations), source.content_sha256, source.seed.kind))
     connection.execute("""INSERT INTO mi.research_evidence(organization_id,brand_id,job_id,source_id,area,kind,
         extracted_text,extracted_sha256,confidence_cap) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)""",

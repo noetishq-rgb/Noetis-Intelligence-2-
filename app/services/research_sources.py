@@ -1,6 +1,6 @@
 """Public-page collection and optional India-focused discovery; snippets are not evidence."""
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, datetime
 import hashlib
 import time
 from urllib.parse import urlsplit
@@ -20,6 +20,7 @@ class CollectedSource:
     content_sha256: str
     confidence_cap: float
     limitations: list[str]
+    accessed_at: datetime | None = None
 
 
 class BraveDiscovery:

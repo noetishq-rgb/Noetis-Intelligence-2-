@@ -27,6 +27,11 @@ def reserve(connection, job, workflow, profile_row, request, input_count, provid
         raise BudgetError('research_context_exceeds_limit')
     padding = max(256, math.ceil(input_count * .1))
     reserved_tokens = input_count + padding + request.maximum_output_tokens
+    if config.research_pilot_brand_id == job['brand_id']:
+        # Dollar admission is independent of optional INR reporting rates. The
+        # workflow lock held by the caller serializes this with dispatch writes.
+        from app.research_pilot import admit_pilot
+        admit_pilot(connection, job, request, input_count + padding, model)
     rates = (config.model_input_paise_per_million, config.model_output_paise_per_million)
     price_date = date.fromisoformat(config.pricing_as_of) if config.pricing_as_of else None
     priced = all(rate is not None for rate in rates) and price_date is not None
