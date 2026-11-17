@@ -1,0 +1,2 @@
+# Reproducible application dependencies used by Vercel.
+-r requirements.lock

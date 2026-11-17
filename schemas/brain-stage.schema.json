@@ -1,0 +1,34 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "key": {
+      "title": "Key",
+      "type": "string"
+    },
+    "title": {
+      "title": "Title",
+      "type": "string"
+    },
+    "state": {
+      "enum": [
+        "pending",
+        "running",
+        "completed",
+        "failed",
+        "skipped",
+        "needs_review"
+      ],
+      "title": "State",
+      "type": "string"
+    }
+  },
+  "required": [
+    "key",
+    "title",
+    "state"
+  ],
+  "title": "BrainStage",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:marketing-intelligence:brain-stage:1.0"
+}

@@ -1,0 +1,226 @@
+{
+  "$defs": {
+    "IssueAcknowledgement": {
+      "additionalProperties": false,
+      "properties": {
+        "issue_index": {
+          "maximum": 50,
+          "minimum": 0,
+          "title": "Issue Index",
+          "type": "integer"
+        },
+        "rationale": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "accepted_risk": {
+          "title": "Accepted Risk",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "issue_index",
+        "rationale",
+        "accepted_risk"
+      ],
+      "title": "IssueAcknowledgement",
+      "type": "object"
+    },
+    "KPI": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "definition": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Definition",
+          "type": "string"
+        },
+        "unit": {
+          "enum": [
+            "count",
+            "percent",
+            "ratio",
+            "INR",
+            "days"
+          ],
+          "title": "Unit",
+          "type": "string"
+        },
+        "baseline": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Baseline"
+        },
+        "target_min": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Target Min"
+        },
+        "target_max": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Target Max"
+        },
+        "measurement_source": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Measurement Source",
+          "type": "string"
+        },
+        "review_day": {
+          "maximum": 30,
+          "minimum": 1,
+          "title": "Review Day",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "definition",
+        "unit",
+        "baseline",
+        "target_min",
+        "target_max",
+        "measurement_source",
+        "review_day"
+      ],
+      "title": "KPI",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "expected_workflow_version": {
+      "minimum": 1,
+      "title": "Expected Workflow Version",
+      "type": "integer"
+    },
+    "artifact_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Artifact Sha256",
+      "type": "string"
+    },
+    "decision": {
+      "enum": [
+        "approved",
+        "revision_requested",
+        "rejected"
+      ],
+      "title": "Decision",
+      "type": "string"
+    },
+    "reason": {
+      "maxLength": 10000,
+      "minLength": 1,
+      "title": "Reason",
+      "type": "string"
+    },
+    "evidence_checked": {
+      "default": false,
+      "title": "Evidence Checked",
+      "type": "boolean"
+    },
+    "dependencies_checked": {
+      "default": false,
+      "title": "Dependencies Checked",
+      "type": "boolean"
+    },
+    "distinctness_checked": {
+      "default": false,
+      "title": "Distinctness Checked",
+      "type": "boolean"
+    },
+    "owners_and_schedule_checked": {
+      "default": false,
+      "title": "Owners And Schedule Checked",
+      "type": "boolean"
+    },
+    "budget_checked": {
+      "default": false,
+      "title": "Budget Checked",
+      "type": "boolean"
+    },
+    "compliance_checked": {
+      "default": false,
+      "title": "Compliance Checked",
+      "type": "boolean"
+    },
+    "selected_option_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Selected Option Id"
+    },
+    "critique_sha256": {
+      "anyOf": [
+        {
+          "pattern": "^[a-f0-9]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Critique Sha256"
+    },
+    "approved_kpis": {
+      "items": {
+        "$ref": "#/$defs/KPI"
+      },
+      "maxItems": 20,
+      "title": "Approved Kpis",
+      "type": "array"
+    },
+    "issue_acknowledgements": {
+      "items": {
+        "$ref": "#/$defs/IssueAcknowledgement"
+      },
+      "title": "Issue Acknowledgements",
+      "type": "array"
+    }
+  },
+  "required": [
+    "expected_workflow_version",
+    "artifact_sha256",
+    "decision",
+    "reason"
+  ],
+  "title": "PlanningReview",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:marketing-intelligence:planning-review:1.0"
+}

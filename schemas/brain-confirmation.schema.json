@@ -1,0 +1,45 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "expected_review_sequence": {
+      "minimum": 0,
+      "title": "Expected Review Sequence",
+      "type": "integer"
+    },
+    "approved_chapters": {
+      "items": {
+        "enum": [
+          "business",
+          "audience",
+          "positioning",
+          "market",
+          "presence",
+          "objectives"
+        ],
+        "type": "string"
+      },
+      "maxItems": 6,
+      "minItems": 1,
+      "title": "Approved Chapters",
+      "type": "array"
+    },
+    "partial": {
+      "default": false,
+      "title": "Partial",
+      "type": "boolean"
+    },
+    "acknowledge_limitations": {
+      "title": "Acknowledge Limitations",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "expected_review_sequence",
+    "approved_chapters",
+    "acknowledge_limitations"
+  ],
+  "title": "BrainConfirm",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:marketing-intelligence:brain-confirmation:1.0"
+}

@@ -1,0 +1,67 @@
+name: Bounded research workers
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: bounded-workers
+  cancel-in-progress: false
+jobs:
+  crawl:
+    if: vars.NOETIS_WORKERS_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install -r requirements.lock
+      - run: python scripts/run_worker.py --kind crawl --seconds 240
+        env:
+          MI_DATABASE_URL: ${{ secrets.NOETIS_CRAWL_DATABASE_URL }}
+          MI_SERVICE_USER_ID: ${{ secrets.NOETIS_CRAWL_SERVICE_USER_ID }}
+  research:
+    if: vars.NOETIS_RESEARCH_WORKER_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install -r requirements.lock
+      - run: python scripts/run_worker.py --kind research --seconds 240
+        env:
+          MI_DATABASE_URL: ${{ secrets.NOETIS_RESEARCH_DATABASE_URL }}
+          MI_SERVICE_USER_ID: ${{ secrets.NOETIS_RESEARCH_SERVICE_USER_ID }}
+          MI_ALLOW_MODEL_CALLS: ${{ vars.NOETIS_ALLOW_MODEL_CALLS || 'false' }}
+          MI_MODEL_PROVIDER: ${{ vars.NOETIS_MODEL_PROVIDER || 'disabled' }}
+          MI_ANTHROPIC_API_KEY: ${{ secrets.NOETIS_ANTHROPIC_API_KEY }}
+          MI_ANTHROPIC_MODEL: ${{ vars.NOETIS_ANTHROPIC_MODEL }}
+          MI_MODEL_INPUT_PAISE_PER_MILLION: ${{ vars.NOETIS_MODEL_INPUT_PAISE_PER_MILLION }}
+          MI_MODEL_OUTPUT_PAISE_PER_MILLION: ${{ vars.NOETIS_MODEL_OUTPUT_PAISE_PER_MILLION }}
+          MI_PRICING_AS_OF: ${{ vars.NOETIS_PRICING_AS_OF }}
+          MI_RESEARCH_MAX_COST_PAISE: ${{ vars.NOETIS_MAX_COST_PAISE }}
+  planning:
+    if: vars.NOETIS_PLANNING_WORKER_ENABLED == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install -r requirements.lock
+      - run: python scripts/run_worker.py --kind planning --seconds 240
+        env:
+          MI_DATABASE_URL: ${{ secrets.NOETIS_PLANNING_DATABASE_URL }}
+          MI_SERVICE_USER_ID: ${{ secrets.NOETIS_PLANNING_SERVICE_USER_ID }}
+          MI_ALLOW_MODEL_CALLS: ${{ vars.NOETIS_ALLOW_MODEL_CALLS || 'false' }}
+          MI_ALLOW_PLANNING_CALLS: ${{ vars.NOETIS_ALLOW_PLANNING_CALLS || 'false' }}
+          MI_MODEL_PROVIDER: ${{ vars.NOETIS_MODEL_PROVIDER || 'disabled' }}
+          MI_ANTHROPIC_API_KEY: ${{ secrets.NOETIS_ANTHROPIC_API_KEY }}
+          MI_ANTHROPIC_MODEL: ${{ vars.NOETIS_ANTHROPIC_MODEL }}
+          MI_MODEL_INPUT_PAISE_PER_MILLION: ${{ vars.NOETIS_MODEL_INPUT_PAISE_PER_MILLION }}
+          MI_MODEL_OUTPUT_PAISE_PER_MILLION: ${{ vars.NOETIS_MODEL_OUTPUT_PAISE_PER_MILLION }}
+          MI_PRICING_AS_OF: ${{ vars.NOETIS_PRICING_AS_OF }}
+          MI_RESEARCH_MAX_COST_PAISE: ${{ vars.NOETIS_MAX_COST_PAISE }}

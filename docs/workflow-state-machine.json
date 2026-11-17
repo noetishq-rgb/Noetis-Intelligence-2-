@@ -1,0 +1,332 @@
+{
+  "version": "1.3",
+  "initial_state": "brand_created",
+  "states": [
+    "awaiting_creative_approval",
+    "awaiting_deliverable_approval",
+    "awaiting_inputs",
+    "awaiting_onboarding",
+    "awaiting_plan_approval",
+    "awaiting_profile_confirmation",
+    "awaiting_research_confirmation",
+    "awaiting_strategy_selection",
+    "brand_created",
+    "cancelled",
+    "completed",
+    "crawl_failed",
+    "crawl_queued",
+    "crawling",
+    "creating_briefs",
+    "creative_queued",
+    "failed",
+    "needs_human_review",
+    "plan_queued",
+    "planning",
+    "preparing_deliverables",
+    "ready_for_delivery",
+    "ready_for_research",
+    "ready_for_strategy",
+    "red_team_queued",
+    "report_queued",
+    "research_queued",
+    "researching",
+    "reviewing_strategy",
+    "strategizing",
+    "strategy_queued"
+  ],
+  "transitions": [
+    {
+      "from": "brand_created",
+      "event": "queue_crawl",
+      "to": "crawl_queued"
+    },
+    {
+      "from": "crawl_queued",
+      "event": "start_crawl",
+      "to": "crawling"
+    },
+    {
+      "from": "crawling",
+      "event": "crawl_succeeded",
+      "to": "awaiting_onboarding"
+    },
+    {
+      "from": "crawling",
+      "event": "crawl_failed",
+      "to": "crawl_failed"
+    },
+    {
+      "from": "crawl_failed",
+      "event": "retry",
+      "to": "crawl_queued"
+    },
+    {
+      "from": "awaiting_onboarding",
+      "event": "queue_crawl",
+      "to": "crawl_queued"
+    },
+    {
+      "from": "awaiting_onboarding",
+      "event": "submit_onboarding",
+      "to": "awaiting_profile_confirmation"
+    },
+    {
+      "from": "awaiting_profile_confirmation",
+      "event": "confirm_profile",
+      "to": "ready_for_research"
+    },
+    {
+      "from": "ready_for_research",
+      "event": "queue_research",
+      "to": "research_queued"
+    },
+    {
+      "from": "research_queued",
+      "event": "start_research",
+      "to": "researching"
+    },
+    {
+      "from": "researching",
+      "event": "research_succeeded",
+      "to": "awaiting_research_confirmation"
+    },
+    {
+      "from": "awaiting_research_confirmation",
+      "event": "confirm_research",
+      "to": "ready_for_strategy"
+    },
+    {
+      "from": "awaiting_research_confirmation",
+      "event": "request_research_revision",
+      "to": "ready_for_research"
+    },
+    {
+      "from": "researching",
+      "event": "provider_outcome_unknown",
+      "to": "needs_human_review"
+    },
+    {
+      "from": "researching",
+      "event": "budget_exhausted",
+      "to": "needs_human_review"
+    },
+    {
+      "from": "ready_for_strategy",
+      "event": "queue_strategy",
+      "to": "strategy_queued"
+    },
+    {
+      "from": "strategy_queued",
+      "event": "queue_strategy",
+      "to": "strategy_queued"
+    },
+    {
+      "from": "red_team_queued",
+      "event": "queue_red_team",
+      "to": "red_team_queued"
+    },
+    {
+      "from": "plan_queued",
+      "event": "queue_plan",
+      "to": "plan_queued"
+    },
+    {
+      "from": "creative_queued",
+      "event": "queue_creative",
+      "to": "creative_queued"
+    },
+    {
+      "from": "strategy_queued",
+      "event": "start_strategy",
+      "to": "strategizing"
+    },
+    {
+      "from": "strategizing",
+      "event": "strategy_succeeded",
+      "to": "red_team_queued"
+    },
+    {
+      "from": "red_team_queued",
+      "event": "start_red_team",
+      "to": "reviewing_strategy"
+    },
+    {
+      "from": "reviewing_strategy",
+      "event": "critique_succeeded",
+      "to": "awaiting_strategy_selection"
+    },
+    {
+      "from": "awaiting_strategy_selection",
+      "event": "request_strategy_revision",
+      "to": "strategy_queued"
+    },
+    {
+      "from": "awaiting_strategy_selection",
+      "event": "approve_strategy",
+      "to": "plan_queued"
+    },
+    {
+      "from": "plan_queued",
+      "event": "start_plan",
+      "to": "planning"
+    },
+    {
+      "from": "planning",
+      "event": "plan_succeeded",
+      "to": "awaiting_plan_approval"
+    },
+    {
+      "from": "awaiting_plan_approval",
+      "event": "request_plan_revision",
+      "to": "plan_queued"
+    },
+    {
+      "from": "awaiting_plan_approval",
+      "event": "approve_plan",
+      "to": "creative_queued"
+    },
+    {
+      "from": "creative_queued",
+      "event": "start_creative",
+      "to": "creating_briefs"
+    },
+    {
+      "from": "creating_briefs",
+      "event": "creative_succeeded",
+      "to": "awaiting_creative_approval"
+    },
+    {
+      "from": "awaiting_creative_approval",
+      "event": "request_creative_revision",
+      "to": "creative_queued"
+    },
+    {
+      "from": "awaiting_creative_approval",
+      "event": "approve_creative",
+      "to": "ready_for_delivery"
+    },
+    {
+      "from": "report_queued",
+      "event": "start_report",
+      "to": "preparing_deliverables"
+    },
+    {
+      "from": "preparing_deliverables",
+      "event": "report_succeeded",
+      "to": "awaiting_deliverable_approval"
+    },
+    {
+      "from": "awaiting_deliverable_approval",
+      "event": "request_deliverable_revision",
+      "to": "report_queued"
+    },
+    {
+      "from": "awaiting_deliverable_approval",
+      "event": "approve_deliverables",
+      "to": "completed"
+    },
+    {
+      "from": "strategizing",
+      "event": "provider_outcome_unknown",
+      "to": "needs_human_review"
+    },
+    {
+      "from": "strategizing",
+      "event": "budget_exhausted",
+      "to": "needs_human_review"
+    },
+    {
+      "from": "reviewing_strategy",
+      "event": "provider_outcome_unknown",
+      "to": "needs_human_review"
+    },
+    {
+      "from": "reviewing_strategy",
+      "event": "budget_exhausted",
+      "to": "needs_human_review"
+    },
+    {
+      "from": "planning",
+      "event": "provider_outcome_unknown",
+      "to": "needs_human_review"
+    },
+    {
+      "from": "planning",
+      "event": "budget_exhausted",
+      "to": "needs_human_review"
+    },
+    {
+      "from": "creating_briefs",
+      "event": "provider_outcome_unknown",
+      "to": "needs_human_review"
+    },
+    {
+      "from": "creating_briefs",
+      "event": "budget_exhausted",
+      "to": "needs_human_review"
+    }
+  ],
+  "running_states": [
+    "crawling",
+    "creating_briefs",
+    "planning",
+    "preparing_deliverables",
+    "researching",
+    "reviewing_strategy",
+    "strategizing"
+  ],
+  "resume_targets": {
+    "crawling": "crawl_queued",
+    "researching": "research_queued",
+    "strategizing": "strategy_queued",
+    "reviewing_strategy": "red_team_queued",
+    "planning": "plan_queued",
+    "creating_briefs": "creative_queued",
+    "preparing_deliverables": "report_queued"
+  },
+  "validation_policy": {
+    "maximum_invalid_outputs": 2,
+    "then": "needs_human_review"
+  },
+  "job_policy": {
+    "max_attempts": 3,
+    "crawl_lease_seconds": 120,
+    "research_lease_seconds": 900,
+    "fenced_completion": true,
+    "lost_model_dispatch": "hold_reservation_and_pause_for_human_review"
+  },
+  "budget_policy": {
+    "max_agent_calls": 20,
+    "token_budget": 100000,
+    "atomic_reservation": true,
+    "unknown_usage_is_zero": false,
+    "currency": "INR",
+    "cost_cap_requires_dated_pricing": true
+  },
+  "phase1_enabled_stages": [
+    "intake",
+    "crawl",
+    "onboarding",
+    "profile_confirmation"
+  ],
+  "phase2_enabled_stages": [
+    "research_collection",
+    "research_generation",
+    "research_confirmation"
+  ],
+  "phase2_stop_state": "ready_for_strategy",
+  "phase3_validation": {
+    "validator_version": "3.0",
+    "human_claim_assessment_required": true,
+    "provenance_is_semantic_validation": false
+  },
+  "phase4_enabled_stages": [
+    "strategy",
+    "strategy_critique",
+    "thirty_day_plan",
+    "creative_brief"
+  ],
+  "phase4_stop_state": "ready_for_delivery",
+  "phase4_model_calls_default": "disabled",
+  "external_execution": false
+}

@@ -1,0 +1,459 @@
+{
+  "$defs": {
+    "DeliveryTask": {
+      "additionalProperties": false,
+      "properties": {
+        "task_id": {
+          "format": "uuid",
+          "title": "Task Id",
+          "type": "string"
+        },
+        "day": {
+          "maximum": 30,
+          "minimum": 1,
+          "title": "Day",
+          "type": "integer"
+        },
+        "channel": {
+          "enum": [
+            "meta_ads",
+            "meta_organic",
+            "google_seo",
+            "google_search",
+            "instagram",
+            "linkedin",
+            "youtube",
+            "facebook",
+            "email"
+          ],
+          "title": "Channel",
+          "type": "string"
+        },
+        "deliverable": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Deliverable",
+          "type": "string"
+        },
+        "format": {
+          "enum": [
+            "reel",
+            "carousel",
+            "static",
+            "video",
+            "linkedin_post",
+            "landing_page",
+            "seo_article",
+            "email"
+          ],
+          "title": "Format",
+          "type": "string"
+        },
+        "audience_segment_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Audience Segment Id"
+        },
+        "funnel_stage": {
+          "enum": [
+            "awareness",
+            "consideration",
+            "conversion",
+            "retention",
+            "measurement"
+          ],
+          "title": "Funnel Stage",
+          "type": "string"
+        },
+        "owner_user_id": {
+          "format": "uuid",
+          "title": "Owner User Id",
+          "type": "string"
+        },
+        "dependency_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Dependency Ids",
+          "type": "array"
+        },
+        "approval_required": {
+          "title": "Approval Required",
+          "type": "boolean"
+        },
+        "success_metric": {
+          "$ref": "#/$defs/KPI"
+        },
+        "production_requirements": {
+          "items": {
+            "maxLength": 10000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Production Requirements",
+          "type": "array"
+        },
+        "risks": {
+          "items": {
+            "maxLength": 10000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Risks",
+          "type": "array"
+        }
+      },
+      "required": [
+        "task_id",
+        "day",
+        "channel",
+        "deliverable",
+        "format",
+        "audience_segment_id",
+        "funnel_stage",
+        "owner_user_id",
+        "dependency_ids",
+        "approval_required",
+        "success_metric",
+        "production_requirements",
+        "risks"
+      ],
+      "title": "DeliveryTask",
+      "type": "object"
+    },
+    "Experiment": {
+      "additionalProperties": false,
+      "properties": {
+        "hypothesis": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Hypothesis",
+          "type": "string"
+        },
+        "control": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Control",
+          "type": "string"
+        },
+        "variant": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Variant",
+          "type": "string"
+        },
+        "success_metric": {
+          "$ref": "#/$defs/KPI"
+        },
+        "checkpoint_days": {
+          "items": {
+            "maximum": 30,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "minItems": 1,
+          "title": "Checkpoint Days",
+          "type": "array"
+        }
+      },
+      "required": [
+        "hypothesis",
+        "control",
+        "variant",
+        "success_metric",
+        "checkpoint_days"
+      ],
+      "title": "Experiment",
+      "type": "object"
+    },
+    "Gap": {
+      "additionalProperties": false,
+      "properties": {
+        "field": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Field",
+          "type": "string"
+        },
+        "question": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Question",
+          "type": "string"
+        },
+        "critical": {
+          "title": "Critical",
+          "type": "boolean"
+        },
+        "reason": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "field",
+        "question",
+        "critical",
+        "reason"
+      ],
+      "title": "Gap",
+      "type": "object"
+    },
+    "KPI": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "definition": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Definition",
+          "type": "string"
+        },
+        "unit": {
+          "enum": [
+            "count",
+            "percent",
+            "ratio",
+            "INR",
+            "days"
+          ],
+          "title": "Unit",
+          "type": "string"
+        },
+        "baseline": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Baseline"
+        },
+        "target_min": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Target Min"
+        },
+        "target_max": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Target Max"
+        },
+        "measurement_source": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Measurement Source",
+          "type": "string"
+        },
+        "review_day": {
+          "maximum": 30,
+          "minimum": 1,
+          "title": "Review Day",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "definition",
+        "unit",
+        "baseline",
+        "target_min",
+        "target_max",
+        "measurement_source",
+        "review_day"
+      ],
+      "title": "KPI",
+      "type": "object"
+    },
+    "Money": {
+      "additionalProperties": false,
+      "properties": {
+        "currency": {
+          "const": "INR",
+          "default": "INR",
+          "title": "Currency",
+          "type": "string"
+        },
+        "amount_paise": {
+          "minimum": 0,
+          "title": "Amount Paise",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "amount_paise"
+      ],
+      "title": "Money",
+      "type": "object"
+    },
+    "MoneyRange": {
+      "additionalProperties": false,
+      "properties": {
+        "minimum": {
+          "$ref": "#/$defs/Money"
+        },
+        "maximum": {
+          "$ref": "#/$defs/Money"
+        }
+      },
+      "required": [
+        "minimum",
+        "maximum"
+      ],
+      "title": "MoneyRange",
+      "type": "object"
+    },
+    "WeekTheme": {
+      "additionalProperties": false,
+      "properties": {
+        "week": {
+          "maximum": 5,
+          "minimum": 1,
+          "title": "Week",
+          "type": "integer"
+        },
+        "theme": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Theme",
+          "type": "string"
+        }
+      },
+      "required": [
+        "week",
+        "theme"
+      ],
+      "title": "WeekTheme",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.1",
+      "default": "1.1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "brand_id": {
+      "format": "uuid",
+      "title": "Brand Id",
+      "type": "string"
+    },
+    "approved_strategy_id": {
+      "format": "uuid",
+      "title": "Approved Strategy Id",
+      "type": "string"
+    },
+    "approval_record_id": {
+      "format": "uuid",
+      "title": "Approval Record Id",
+      "type": "string"
+    },
+    "starts_on": {
+      "format": "date",
+      "title": "Starts On",
+      "type": "string"
+    },
+    "duration_days": {
+      "const": 30,
+      "default": 30,
+      "title": "Duration Days",
+      "type": "integer"
+    },
+    "weekly_themes": {
+      "items": {
+        "$ref": "#/$defs/WeekTheme"
+      },
+      "title": "Weekly Themes",
+      "type": "array"
+    },
+    "tasks": {
+      "items": {
+        "$ref": "#/$defs/DeliveryTask"
+      },
+      "maxItems": 8,
+      "minItems": 1,
+      "title": "Tasks",
+      "type": "array"
+    },
+    "test_matrix": {
+      "items": {
+        "$ref": "#/$defs/Experiment"
+      },
+      "title": "Test Matrix",
+      "type": "array"
+    },
+    "budget": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/MoneyRange"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "risks": {
+      "items": {
+        "maxLength": 10000,
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Risks",
+      "type": "array"
+    },
+    "missing_inputs": {
+      "items": {
+        "$ref": "#/$defs/Gap"
+      },
+      "title": "Missing Inputs",
+      "type": "array"
+    }
+  },
+  "required": [
+    "brand_id",
+    "approved_strategy_id",
+    "approval_record_id",
+    "starts_on",
+    "weekly_themes",
+    "tasks",
+    "test_matrix",
+    "budget",
+    "risks",
+    "missing_inputs"
+  ],
+  "title": "DeliveryPlan",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:marketing-intelligence:30-day-plan-v1.1:1.1"
+}

@@ -1,0 +1,145 @@
+{
+  "$defs": {
+    "SourceSeed": {
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "format": "uri",
+          "maxLength": 2083,
+          "minLength": 1,
+          "title": "Url",
+          "type": "string"
+        },
+        "kind": {
+          "default": "public_web",
+          "enum": [
+            "public_web",
+            "social",
+            "review",
+            "search"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "area": {
+          "default": "market",
+          "enum": [
+            "brand",
+            "market",
+            "audience",
+            "competitors",
+            "social",
+            "reviews",
+            "search",
+            "seasonality",
+            "creative",
+            "regulatory"
+          ],
+          "title": "Area",
+          "type": "string"
+        },
+        "geographic_scope": {
+          "default": "unknown",
+          "enum": [
+            "india",
+            "global",
+            "unknown"
+          ],
+          "title": "Geographic Scope",
+          "type": "string"
+        },
+        "applicability_to_india": {
+          "anyOf": [
+            {
+              "maxLength": 10000,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Applicability To India"
+        }
+      },
+      "required": [
+        "url"
+      ],
+      "title": "SourceSeed",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "task_type": {
+      "default": "brand_research",
+      "enum": [
+        "brand_research",
+        "competitor_research",
+        "audience_research",
+        "market_research",
+        "social_listening",
+        "content_gap"
+      ],
+      "title": "Task Type",
+      "type": "string"
+    },
+    "expected_workflow_version": {
+      "minimum": 1,
+      "title": "Expected Workflow Version",
+      "type": "integer"
+    },
+    "sources": {
+      "items": {
+        "$ref": "#/$defs/SourceSeed"
+      },
+      "maxItems": 8,
+      "title": "Sources",
+      "type": "array"
+    },
+    "search_queries": {
+      "items": {
+        "maxLength": 200,
+        "minLength": 3,
+        "type": "string"
+      },
+      "maxItems": 4,
+      "title": "Search Queries",
+      "type": "array"
+    },
+    "areas": {
+      "items": {
+        "enum": [
+          "brand",
+          "market",
+          "audience",
+          "competitors",
+          "social",
+          "reviews",
+          "search",
+          "seasonality",
+          "creative",
+          "regulatory"
+        ],
+        "type": "string"
+      },
+      "maxItems": 10,
+      "minItems": 1,
+      "title": "Areas",
+      "type": "array"
+    },
+    "acknowledge_uncertain_charge": {
+      "default": false,
+      "title": "Acknowledge Uncertain Charge",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "expected_workflow_version"
+  ],
+  "title": "ResearchStart",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:marketing-intelligence:research-start:1.0"
+}

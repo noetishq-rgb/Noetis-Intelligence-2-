@@ -1,0 +1,548 @@
+{
+  "$defs": {
+    "AudienceSegment": {
+      "additionalProperties": false,
+      "properties": {
+        "segment_id": {
+          "format": "uuid",
+          "title": "Segment Id",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "geography": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Geography",
+          "type": "array"
+        },
+        "languages": {
+          "items": {
+            "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$",
+            "type": "string"
+          },
+          "title": "Languages",
+          "type": "array"
+        },
+        "needs": {
+          "items": {
+            "$ref": "#/$defs/Claim"
+          },
+          "title": "Needs",
+          "type": "array"
+        },
+        "objections": {
+          "items": {
+            "$ref": "#/$defs/Claim"
+          },
+          "title": "Objections",
+          "type": "array"
+        },
+        "buying_triggers": {
+          "items": {
+            "$ref": "#/$defs/Claim"
+          },
+          "title": "Buying Triggers",
+          "type": "array"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/Claim"
+          },
+          "title": "Evidence",
+          "type": "array"
+        }
+      },
+      "required": [
+        "segment_id",
+        "name",
+        "geography",
+        "languages",
+        "needs",
+        "objections",
+        "buying_triggers",
+        "evidence"
+      ],
+      "title": "AudienceSegment",
+      "type": "object"
+    },
+    "Citation": {
+      "additionalProperties": false,
+      "properties": {
+        "source_id": {
+          "format": "uuid",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "url": {
+          "format": "uri",
+          "maxLength": 2083,
+          "minLength": 1,
+          "title": "Url",
+          "type": "string"
+        },
+        "publisher": {
+          "anyOf": [
+            {
+              "maxLength": 300,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Publisher"
+        },
+        "published_at": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Published At"
+        },
+        "accessed_at": {
+          "format": "date-time",
+          "title": "Accessed At",
+          "type": "string"
+        },
+        "geographic_scope": {
+          "enum": [
+            "india",
+            "global",
+            "unknown"
+          ],
+          "title": "Geographic Scope",
+          "type": "string"
+        },
+        "applicability_to_india": {
+          "anyOf": [
+            {
+              "maxLength": 10000,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Applicability To India"
+        },
+        "access_limitations": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Access Limitations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "source_id",
+        "url",
+        "publisher",
+        "published_at",
+        "accessed_at",
+        "geographic_scope",
+        "applicability_to_india",
+        "access_limitations"
+      ],
+      "title": "Citation",
+      "type": "object"
+    },
+    "Claim": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "classification": {
+                "enum": [
+                  "fact",
+                  "inference"
+                ]
+              }
+            },
+            "required": [
+              "classification"
+            ]
+          },
+          "then": {
+            "properties": {
+              "source_ids": {
+                "minItems": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "classification": {
+                "const": "gap"
+              }
+            },
+            "required": [
+              "classification"
+            ]
+          },
+          "then": {
+            "properties": {
+              "confidence": {
+                "const": 0
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "claim_id": {
+          "format": "uuid",
+          "title": "Claim Id",
+          "type": "string"
+        },
+        "classification": {
+          "enum": [
+            "fact",
+            "inference",
+            "assumption",
+            "gap"
+          ],
+          "title": "Classification",
+          "type": "string"
+        },
+        "statement": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Statement",
+          "type": "string"
+        },
+        "source_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "rationale": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "geographic_scope": {
+          "enum": [
+            "india",
+            "global",
+            "unknown"
+          ],
+          "title": "Geographic Scope",
+          "type": "string"
+        }
+      },
+      "required": [
+        "claim_id",
+        "classification",
+        "statement",
+        "source_ids",
+        "confidence",
+        "rationale",
+        "geographic_scope"
+      ],
+      "title": "Claim",
+      "type": "object"
+    },
+    "CompetitorProfile": {
+      "additionalProperties": false,
+      "properties": {
+        "competitor_id": {
+          "format": "uuid",
+          "title": "Competitor Id",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "website": {
+          "anyOf": [
+            {
+              "format": "uri",
+              "maxLength": 2083,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Website"
+        },
+        "relationship": {
+          "enum": [
+            "direct",
+            "indirect"
+          ],
+          "title": "Relationship",
+          "type": "string"
+        },
+        "positioning": {
+          "items": {
+            "$ref": "#/$defs/Claim"
+          },
+          "title": "Positioning",
+          "type": "array"
+        },
+        "offers_pricing": {
+          "items": {
+            "$ref": "#/$defs/Claim"
+          },
+          "title": "Offers Pricing",
+          "type": "array"
+        },
+        "content_channels": {
+          "items": {
+            "$ref": "#/$defs/Claim"
+          },
+          "title": "Content Channels",
+          "type": "array"
+        }
+      },
+      "required": [
+        "competitor_id",
+        "name",
+        "website",
+        "relationship",
+        "positioning",
+        "offers_pricing",
+        "content_channels"
+      ],
+      "title": "CompetitorProfile",
+      "type": "object"
+    },
+    "Gap": {
+      "additionalProperties": false,
+      "properties": {
+        "field": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Field",
+          "type": "string"
+        },
+        "question": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Question",
+          "type": "string"
+        },
+        "critical": {
+          "title": "Critical",
+          "type": "boolean"
+        },
+        "reason": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "field",
+        "question",
+        "critical",
+        "reason"
+      ],
+      "title": "Gap",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "brand_id": {
+      "format": "uuid",
+      "title": "Brand Id",
+      "type": "string"
+    },
+    "profile_version": {
+      "minimum": 1,
+      "title": "Profile Version",
+      "type": "integer"
+    },
+    "executive_summary": {
+      "maxLength": 10000,
+      "minLength": 1,
+      "title": "Executive Summary",
+      "type": "string"
+    },
+    "geographic_focus": {
+      "const": "IN",
+      "default": "IN",
+      "title": "Geographic Focus",
+      "type": "string"
+    },
+    "research_as_of": {
+      "format": "date",
+      "title": "Research As Of",
+      "type": "string"
+    },
+    "sources": {
+      "items": {
+        "$ref": "#/$defs/Citation"
+      },
+      "title": "Sources",
+      "type": "array"
+    },
+    "brand_findings": {
+      "items": {
+        "$ref": "#/$defs/Claim"
+      },
+      "title": "Brand Findings",
+      "type": "array"
+    },
+    "category_market": {
+      "items": {
+        "$ref": "#/$defs/Claim"
+      },
+      "title": "Category Market",
+      "type": "array"
+    },
+    "demand_seasonality": {
+      "items": {
+        "$ref": "#/$defs/Claim"
+      },
+      "title": "Demand Seasonality",
+      "type": "array"
+    },
+    "audiences": {
+      "items": {
+        "$ref": "#/$defs/AudienceSegment"
+      },
+      "title": "Audiences",
+      "type": "array"
+    },
+    "competitors": {
+      "items": {
+        "$ref": "#/$defs/CompetitorProfile"
+      },
+      "title": "Competitors",
+      "type": "array"
+    },
+    "social_listening": {
+      "items": {
+        "$ref": "#/$defs/Claim"
+      },
+      "title": "Social Listening",
+      "type": "array"
+    },
+    "reputation_reviews": {
+      "items": {
+        "$ref": "#/$defs/Claim"
+      },
+      "title": "Reputation Reviews",
+      "type": "array"
+    },
+    "search_opportunities": {
+      "items": {
+        "$ref": "#/$defs/Claim"
+      },
+      "title": "Search Opportunities",
+      "type": "array"
+    },
+    "creative_content_gaps": {
+      "items": {
+        "$ref": "#/$defs/Claim"
+      },
+      "title": "Creative Content Gaps",
+      "type": "array"
+    },
+    "regulatory_cultural_risks": {
+      "items": {
+        "$ref": "#/$defs/Claim"
+      },
+      "title": "Regulatory Cultural Risks",
+      "type": "array"
+    },
+    "contradictions": {
+      "items": {
+        "$ref": "#/$defs/Claim"
+      },
+      "title": "Contradictions",
+      "type": "array"
+    },
+    "missing_inputs": {
+      "items": {
+        "$ref": "#/$defs/Gap"
+      },
+      "title": "Missing Inputs",
+      "type": "array"
+    },
+    "client_questions": {
+      "items": {
+        "maxLength": 10000,
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Client Questions",
+      "type": "array"
+    },
+    "next_action": {
+      "maxLength": 10000,
+      "minLength": 1,
+      "title": "Next Action",
+      "type": "string"
+    }
+  },
+  "required": [
+    "brand_id",
+    "profile_version",
+    "executive_summary",
+    "research_as_of",
+    "sources",
+    "brand_findings",
+    "category_market",
+    "demand_seasonality",
+    "audiences",
+    "competitors",
+    "social_listening",
+    "reputation_reviews",
+    "search_opportunities",
+    "creative_content_gaps",
+    "regulatory_cultural_risks",
+    "contradictions",
+    "missing_inputs",
+    "client_questions",
+    "next_action"
+  ],
+  "title": "ResearchDossier",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:marketing-intelligence:research-dossier:1.0"
+}

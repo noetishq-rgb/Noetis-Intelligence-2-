@@ -1,0 +1,44 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "validator_version": {
+      "const": "4.0",
+      "default": "4.0",
+      "title": "Validator Version",
+      "type": "string"
+    },
+    "checked_at": {
+      "format": "date-time",
+      "title": "Checked At",
+      "type": "string"
+    },
+    "valid": {
+      "title": "Valid",
+      "type": "boolean"
+    },
+    "issue_codes": {
+      "items": {
+        "maxLength": 300,
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Issue Codes",
+      "type": "array"
+    },
+    "semantic_review_required": {
+      "const": true,
+      "default": true,
+      "title": "Semantic Review Required",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "checked_at",
+    "valid",
+    "issue_codes"
+  ],
+  "title": "PlanningValidation",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:marketing-intelligence:planning-validation:1.0"
+}

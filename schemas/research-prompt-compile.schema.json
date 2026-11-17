@@ -1,0 +1,56 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "evidence_ids": {
+      "items": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "maxItems": 8,
+      "minItems": 1,
+      "title": "Evidence Ids",
+      "type": "array"
+    },
+    "task_type": {
+      "default": "brand_research",
+      "enum": [
+        "brand_research",
+        "competitor_research",
+        "audience_research",
+        "market_research",
+        "social_listening",
+        "content_gap"
+      ],
+      "title": "Task Type",
+      "type": "string"
+    },
+    "areas": {
+      "items": {
+        "enum": [
+          "brand",
+          "market",
+          "audience",
+          "competitors",
+          "social",
+          "reviews",
+          "search",
+          "seasonality",
+          "creative",
+          "regulatory"
+        ],
+        "type": "string"
+      },
+      "maxItems": 10,
+      "minItems": 1,
+      "title": "Areas",
+      "type": "array"
+    }
+  },
+  "required": [
+    "evidence_ids"
+  ],
+  "title": "PromptCompile",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:marketing-intelligence:research-prompt-compile:1.0"
+}

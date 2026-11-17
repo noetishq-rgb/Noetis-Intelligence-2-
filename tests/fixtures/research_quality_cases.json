@@ -1,0 +1,19 @@
+[
+  {"id":"baseline","expected_issue":null,"gold_semantic_verdict":"supported","reason":"The claim describes the captured observation with its sample limits."},
+  {"id":"extra_citation_without_quote","expected_issue":"research_citation_unsupported","gold_semantic_verdict":"unsupported","reason":"A second registered source is cited but has no supporting quotation for this claim."},
+  {"id":"assumption_as_supported_coverage","expected_issue":"research_coverage_unsubstantiated","gold_semantic_verdict":"uncertain","reason":"An assumption is being counted as evidence-backed coverage."},
+  {"id":"duplicate_support","expected_issue":"research_support_duplicate","gold_semantic_verdict":"unsupported","reason":"The same claim/source/quotation appears twice."},
+  {"id":"missing_quote","expected_issue":"research_quote_missing","gold_semantic_verdict":"unsupported","reason":"The claimed quotation does not occur in the model's supplied excerpt."},
+  {"id":"duplicate_gap","expected_issue":"research_gap_duplicate","gold_semantic_verdict":"uncertain","reason":"Duplicate gap fields make review resolution ambiguous."},
+  {"id":"duplicate_citation","expected_issue":"research_claim_source_duplicate","gold_semantic_verdict":"unsupported","reason":"A source is repeated to give an appearance of multiple references."},
+  {"id":"duplicate_coverage","expected_issue":"research_coverage_duplicate","gold_semantic_verdict":"unsupported","reason":"One finding is counted more than once in coverage."},
+  {"id":"different_area_coverage","expected_issue":"research_coverage_reference_invalid","gold_semantic_verdict":"unsupported","reason":"The brand coverage points to a market finding."},
+  {"id":"hidden_finding","expected_issue":"research_coverage_incomplete","gold_semantic_verdict":"unsupported","reason":"A factual market finding exists but is hidden under unavailable coverage."},
+  {"id":"global_evidence_as_india_fact","expected_issue":"research_india_evidence_missing","gold_semantic_verdict":"unsupported","reason":"Global source context cannot establish an India-specific fact."},
+  {"id":"duplicate_conflict_claim","expected_issue":"research_conflict_reference_invalid","gold_semantic_verdict":"unsupported","reason":"A conflict repeats one claim instead of linking distinct claims."},
+  {"id":"dangling_support","expected_issue":"research_support_reference_invalid","gold_semantic_verdict":"unsupported","reason":"A supporting quotation points to a claim that does not exist."},
+  {"id":"wrong_research_cutoff","expected_issue":"research_cutoff_mismatch","gold_semantic_verdict":"unsupported","reason":"The dossier pretends to use a different source cutoff."},
+  {"id":"invented_market_share_real_quote","expected_issue":null,"gold_semantic_verdict":"unsupported","reason":"An authentic quotation is paired with an unrelated 90 percent market-share assertion. Provenance matching cannot determine entailment; human review must reject it."},
+  {"id":"injection_requested_approval_field","expected_issue":"research_contract_invalid","gold_semantic_verdict":"unsupported","reason":"A model obeying a source instruction to approve itself emits a forbidden decision field."},
+  {"id":"truncated_json","expected_issue":"research_json_invalid","gold_semantic_verdict":"unsupported","reason":"A truncated model response cannot become a dossier."}
+]

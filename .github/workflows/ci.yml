@@ -1,0 +1,45 @@
+name: Validate dashboard and tenant-isolated backend
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - run: npm test
+      - run: npm run build
+  backend:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_PASSWORD: ci-root-only-not-production
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 3s
+          --health-timeout 3s
+          --health-retries 15
+    env:
+      MI_TEST_BOOTSTRAP_URL: postgresql://postgres:ci-root-only-not-production@127.0.0.1:5432/postgres
+      MI_MIGRATION_DATABASE_URL: postgresql://managed_owner:ci-managed-only-not-production@127.0.0.1:5432/noetis_ci
+      MI_TEST_OWNER_URL: postgresql://postgres:ci-root-only-not-production@127.0.0.1:5432/noetis_ci
+      MI_DATABASE_URL: postgresql://mi_runtime:ci-api-only-not-production@127.0.0.1:5432/noetis_ci
+      MI_RUNTIME_PASSWORD: ci-api-only-not-production
+    steps:
+      - uses: actions/checkout@v4
+        with: {persist-credentials: false}
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.12'}
+      - run: pip install -r requirements-dev.txt
+      - run: python scripts/ci_database.py
+      - run: python scripts/migrate.py --profile supabase
+      - run: python scripts/migrate.py --profile supabase
+      - run: python scripts/provision.py runtime-role --name mi_runtime --kind api
+      - run: python -m pytest -q

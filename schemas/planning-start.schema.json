@@ -1,0 +1,55 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "stage": {
+      "enum": [
+        "strategy",
+        "strategy_critique",
+        "thirty_day_plan",
+        "creative_brief"
+      ],
+      "title": "Stage",
+      "type": "string"
+    },
+    "expected_workflow_version": {
+      "minimum": 1,
+      "title": "Expected Workflow Version",
+      "type": "integer"
+    },
+    "starts_on": {
+      "anyOf": [
+        {
+          "format": "date",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Starts On"
+    },
+    "owner_user_ids": {
+      "items": {
+        "format": "uuid",
+        "type": "string"
+      },
+      "maxItems": 20,
+      "title": "Owner User Ids",
+      "type": "array"
+    },
+    "acknowledge_uncertain_charge": {
+      "default": false,
+      "title": "Acknowledge Uncertain Charge",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "stage",
+    "expected_workflow_version"
+  ],
+  "title": "PlanningStart",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:marketing-intelligence:planning-start:1.0"
+}

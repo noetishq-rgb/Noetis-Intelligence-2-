@@ -1,0 +1,312 @@
+{
+  "$defs": {
+    "Claim": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "classification": {
+                "enum": [
+                  "fact",
+                  "inference"
+                ]
+              }
+            },
+            "required": [
+              "classification"
+            ]
+          },
+          "then": {
+            "properties": {
+              "source_ids": {
+                "minItems": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "classification": {
+                "const": "gap"
+              }
+            },
+            "required": [
+              "classification"
+            ]
+          },
+          "then": {
+            "properties": {
+              "confidence": {
+                "const": 0
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "claim_id": {
+          "format": "uuid",
+          "title": "Claim Id",
+          "type": "string"
+        },
+        "classification": {
+          "enum": [
+            "fact",
+            "inference",
+            "assumption",
+            "gap"
+          ],
+          "title": "Classification",
+          "type": "string"
+        },
+        "statement": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Statement",
+          "type": "string"
+        },
+        "source_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "rationale": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "geographic_scope": {
+          "enum": [
+            "india",
+            "global",
+            "unknown"
+          ],
+          "title": "Geographic Scope",
+          "type": "string"
+        }
+      },
+      "required": [
+        "claim_id",
+        "classification",
+        "statement",
+        "source_ids",
+        "confidence",
+        "rationale",
+        "geographic_scope"
+      ],
+      "title": "Claim",
+      "type": "object"
+    },
+    "Gap": {
+      "additionalProperties": false,
+      "properties": {
+        "field": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Field",
+          "type": "string"
+        },
+        "question": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Question",
+          "type": "string"
+        },
+        "critical": {
+          "title": "Critical",
+          "type": "boolean"
+        },
+        "reason": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "field",
+        "question",
+        "critical",
+        "reason"
+      ],
+      "title": "Gap",
+      "type": "object"
+    },
+    "OptionReview": {
+      "additionalProperties": false,
+      "properties": {
+        "option_id": {
+          "format": "uuid",
+          "title": "Option Id",
+          "type": "string"
+        },
+        "verdict": {
+          "enum": [
+            "approve",
+            "revise",
+            "reject"
+          ],
+          "title": "Verdict",
+          "type": "string"
+        },
+        "issues": {
+          "items": {
+            "$ref": "#/$defs/ReviewIssue"
+          },
+          "minItems": 3,
+          "title": "Issues",
+          "type": "array"
+        },
+        "weak_assumptions": {
+          "items": {
+            "maxLength": 10000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Weak Assumptions",
+          "type": "array"
+        },
+        "missing_evidence": {
+          "items": {
+            "maxLength": 10000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Missing Evidence",
+          "type": "array"
+        },
+        "competitor_countermove": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Competitor Countermove",
+          "type": "string"
+        },
+        "client_questions": {
+          "items": {
+            "maxLength": 10000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Client Questions",
+          "type": "array"
+        },
+        "risk_score": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Risk Score",
+          "type": "number"
+        }
+      },
+      "required": [
+        "option_id",
+        "verdict",
+        "issues",
+        "weak_assumptions",
+        "missing_evidence",
+        "competitor_countermove",
+        "client_questions",
+        "risk_score"
+      ],
+      "title": "OptionReview",
+      "type": "object"
+    },
+    "ReviewIssue": {
+      "additionalProperties": false,
+      "properties": {
+        "severity": {
+          "enum": [
+            "blocking",
+            "material",
+            "minor"
+          ],
+          "title": "Severity",
+          "type": "string"
+        },
+        "issue": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Issue",
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/Claim"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "required_revision": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Required Revision",
+          "type": "string"
+        }
+      },
+      "required": [
+        "severity",
+        "issue",
+        "evidence",
+        "required_revision"
+      ],
+      "title": "ReviewIssue",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "brand_id": {
+      "format": "uuid",
+      "title": "Brand Id",
+      "type": "string"
+    },
+    "strategy_artifact_id": {
+      "format": "uuid",
+      "title": "Strategy Artifact Id",
+      "type": "string"
+    },
+    "reviews": {
+      "items": {
+        "$ref": "#/$defs/OptionReview"
+      },
+      "maxItems": 3,
+      "minItems": 2,
+      "title": "Reviews",
+      "type": "array"
+    },
+    "missing_inputs": {
+      "items": {
+        "$ref": "#/$defs/Gap"
+      },
+      "title": "Missing Inputs",
+      "type": "array"
+    }
+  },
+  "required": [
+    "brand_id",
+    "strategy_artifact_id",
+    "reviews",
+    "missing_inputs"
+  ],
+  "title": "RedTeamReview",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:marketing-intelligence:red-team-review:1.0"
+}

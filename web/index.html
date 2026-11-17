@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en" data-environment="live-pilot">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="NOETIS — a visual marketing workspace for clear decisions, evidence and the next move.">
+  <meta name="theme-color" content="#f7f8fa">
+  <title>SuperYou overview · NOETIS</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <aside class="sidebar" id="sidebar" aria-label="Agency workspace">
+    <a href="#overview" class="wordmark" aria-label="NOETIS home"><span class="brand-symbol">n<span>↗</span></span>noetis<span class="wordmark-dot">.</span></a>
+    <label class="workspace-switch"><span class="workspace-logo" id="workspace-logo">S</span><span><small>BRAND WORKSPACE</small><select id="brand-select" aria-label="Brand workspace"></select></span></label>
+    <nav id="navigation" aria-label="Main navigation"></nav>
+    <div class="sidebar-bottom"><div class="sidebar-note"><span class="note-icon">✧</span><strong>Good evidence. Better moves.</strong><p>Keep every decision connected<br>to what you actually know.</p><a href="#research">Research readiness <span>↗</span></a></div><button class="profile" id="profile-button"><span class="avatar">N</span><span>NOETIS workspace<small>Internal design preview</small></span><span class="profile-menu">···</span></button></div>
+  </aside>
+  <div class="shell">
+    <header class="topbar"><div class="breadcrumb"><button class="icon-button mobile-menu" id="mobile-menu" aria-label="Open navigation" aria-expanded="false">☰</button><span class="crumb-workspace">Workspace</span><span class="slash">/</span><span id="crumb-brand">SuperYou</span><span class="slash">/</span><strong id="breadcrumb">Overview</strong></div><div class="top-actions"><button class="search-trigger" id="search-trigger" aria-label="Search views"><span>⌕</span><span class="search-label">Jump to…</span><kbd>⌘ K</kbd></button><span class="top-divider"></span><span class="preview-label"><span class="preview-dot"></span>Design preview</span><button class="avatar small-avatar" id="profile-top" aria-label="Workspace information">N</button></div></header>
+    <main id="main" tabindex="-1">
+      <section class="page-heading"><div><div class="eyebrow" id="eyebrow">THE BIG PICTURE</div><h1 id="page-title">Your next move, made clear<span class="heading-dot">.</span></h1><p id="page-subtitle">A little less noise. A clearer view of what deserves your attention.</p></div><div class="page-actions"><button class="button" id="present-button"></button><button class="button primary" id="export-button"></button></div></section>
+      <section class="context-bar" aria-label="Reporting filters"><div class="primary-filters"><label class="filter-control date-filter"><span>◷</span><select id="period-filter" aria-label="Date range"><option value="28">Last 28 days</option><option value="7">Last 7 days</option><option value="56">Last 56 days</option></select></label><label class="filter-control"><select id="channel-filter" aria-label="Channel"><option value="all">All channels</option><option value="meta">Meta Ads</option><option value="search">Google Search</option><option value="organic">Organic social</option><option value="email">Email</option></select></label><button class="button filter-more" id="more-filters" aria-expanded="false"></button><button class="text-button reset-filters" id="reset-filters" hidden>Reset</button></div><label class="mode-control"><span>Data</span><select id="data-mode" aria-label="Data mode"><option value="sample">Illustrative sample</option><option value="readiness">Current readiness</option></select></label></section>
+      <section id="advanced-filters" class="advanced-filters" hidden aria-label="Additional analytical filters"></section>
+      <div class="dataset-note"><span class="sample-marker" id="dataset-label">SAMPLE DATA</span><span id="period-label"></span><span class="dataset-explanation" id="dataset-explanation">Design figures, not observed SuperYou results.</span><button class="text-button" id="data-info">About this data ↗</button></div>
+      <div id="view" aria-live="polite" aria-busy="false"></div>
+      <footer><span><span class="footer-mark">n↗</span> A clearer view. A better next move.</span><span id="footer-state">Sample workspace · session-only decisions</span></footer>
+    </main>
+  </div>
+  <dialog id="drawer" class="drawer" aria-labelledby="drawer-title"><div id="drawer-content"></div></dialog>
+  <dialog id="modal" class="modal" aria-labelledby="modal-title"><div id="modal-content"></div></dialog>
+  <dialog id="command" class="command" aria-label="Jump to a view"><div class="command-search"><span>⌕</span><input id="command-input" placeholder="Where would you like to go?" aria-label="Search views" autocomplete="off"><button class="key-button" data-close="command">Esc</button></div><div id="command-results"></div></dialog>
+  <div id="toast" class="toast" role="status"></div>
+  <noscript><p class="noscript">Enable JavaScript to explore this interactive design preview. No account connections are made.</p></noscript>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

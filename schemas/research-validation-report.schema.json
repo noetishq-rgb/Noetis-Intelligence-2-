@@ -1,0 +1,100 @@
+{
+  "$defs": {
+    "EvidenceWarning": {
+      "additionalProperties": false,
+      "properties": {
+        "source_id": {
+          "format": "uuid",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "code": {
+          "enum": [
+            "publication_date_unknown",
+            "publication_older_than_365_days",
+            "geography_unknown",
+            "global_context_only"
+          ],
+          "title": "Code",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_id",
+        "code"
+      ],
+      "title": "EvidenceWarning",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "validator_version": {
+      "const": "3.0",
+      "default": "3.0",
+      "title": "Validator Version",
+      "type": "string"
+    },
+    "checked_at": {
+      "format": "date-time",
+      "title": "Checked At",
+      "type": "string"
+    },
+    "schema_status": {
+      "enum": [
+        "passed",
+        "failed"
+      ],
+      "title": "Schema Status",
+      "type": "string"
+    },
+    "provenance_status": {
+      "enum": [
+        "passed",
+        "failed",
+        "not_run"
+      ],
+      "title": "Provenance Status",
+      "type": "string"
+    },
+    "semantic_status": {
+      "const": "not_assessed",
+      "default": "not_assessed",
+      "title": "Semantic Status",
+      "type": "string"
+    },
+    "issue_codes": {
+      "items": {
+        "maxLength": 300,
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Issue Codes",
+      "type": "array"
+    },
+    "evidence_warnings": {
+      "items": {
+        "$ref": "#/$defs/EvidenceWarning"
+      },
+      "title": "Evidence Warnings",
+      "type": "array"
+    },
+    "output_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Output Sha256",
+      "type": "string"
+    }
+  },
+  "required": [
+    "checked_at",
+    "schema_status",
+    "provenance_status",
+    "issue_codes",
+    "evidence_warnings",
+    "output_sha256"
+  ],
+  "title": "ResearchValidationReport",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:marketing-intelligence:research-validation-report:1.0"
+}

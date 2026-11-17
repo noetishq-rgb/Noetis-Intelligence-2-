@@ -1,0 +1,139 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "approval_id": {
+      "format": "uuid",
+      "title": "Approval Id",
+      "type": "string"
+    },
+    "brand_id": {
+      "format": "uuid",
+      "title": "Brand Id",
+      "type": "string"
+    },
+    "workflow_id": {
+      "format": "uuid",
+      "title": "Workflow Id",
+      "type": "string"
+    },
+    "artifact_id": {
+      "format": "uuid",
+      "title": "Artifact Id",
+      "type": "string"
+    },
+    "artifact_version": {
+      "minimum": 1,
+      "title": "Artifact Version",
+      "type": "integer"
+    },
+    "artifact_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Artifact Sha256",
+      "type": "string"
+    },
+    "requested_by": {
+      "format": "uuid",
+      "title": "Requested By",
+      "type": "string"
+    },
+    "assigned_to": {
+      "format": "uuid",
+      "title": "Assigned To",
+      "type": "string"
+    },
+    "decision": {
+      "enum": [
+        "pending",
+        "approved",
+        "revision_requested",
+        "rejected"
+      ],
+      "title": "Decision",
+      "type": "string"
+    },
+    "decided_by": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Decided By"
+    },
+    "decided_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Decided At"
+    },
+    "reason": {
+      "anyOf": [
+        {
+          "maxLength": 10000,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Reason"
+    },
+    "selected_strategy_option_id": {
+      "anyOf": [
+        {
+          "format": "uuid",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Selected Strategy Option Id"
+    },
+    "approved_kpi_names": {
+      "items": {
+        "maxLength": 300,
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Approved Kpi Names",
+      "type": "array"
+    }
+  },
+  "required": [
+    "approval_id",
+    "brand_id",
+    "workflow_id",
+    "artifact_id",
+    "artifact_version",
+    "artifact_sha256",
+    "requested_by",
+    "assigned_to",
+    "decision",
+    "decided_by",
+    "decided_at",
+    "reason",
+    "selected_strategy_option_id",
+    "approved_kpi_names"
+  ],
+  "title": "ApprovalRecord",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:marketing-intelligence:approval-record:1.0"
+}

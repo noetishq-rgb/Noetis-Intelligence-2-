@@ -1,0 +1,651 @@
+{
+  "$defs": {
+    "AudienceSegment": {
+      "additionalProperties": false,
+      "properties": {
+        "segment_id": {
+          "format": "uuid",
+          "title": "Segment Id",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "geography": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Geography",
+          "type": "array"
+        },
+        "languages": {
+          "items": {
+            "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$",
+            "type": "string"
+          },
+          "title": "Languages",
+          "type": "array"
+        },
+        "needs": {
+          "items": {
+            "$ref": "#/$defs/Claim"
+          },
+          "title": "Needs",
+          "type": "array"
+        },
+        "objections": {
+          "items": {
+            "$ref": "#/$defs/Claim"
+          },
+          "title": "Objections",
+          "type": "array"
+        },
+        "buying_triggers": {
+          "items": {
+            "$ref": "#/$defs/Claim"
+          },
+          "title": "Buying Triggers",
+          "type": "array"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/Claim"
+          },
+          "title": "Evidence",
+          "type": "array"
+        }
+      },
+      "required": [
+        "segment_id",
+        "name",
+        "geography",
+        "languages",
+        "needs",
+        "objections",
+        "buying_triggers",
+        "evidence"
+      ],
+      "title": "AudienceSegment",
+      "type": "object"
+    },
+    "ChannelAllocation": {
+      "additionalProperties": false,
+      "properties": {
+        "channel": {
+          "enum": [
+            "meta_ads",
+            "meta_organic",
+            "google_seo",
+            "google_search",
+            "instagram",
+            "linkedin",
+            "youtube",
+            "facebook",
+            "email"
+          ],
+          "title": "Channel",
+          "type": "string"
+        },
+        "percent": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Percent",
+          "type": "number"
+        },
+        "rationale": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/Claim"
+          },
+          "title": "Evidence",
+          "type": "array"
+        }
+      },
+      "required": [
+        "channel",
+        "percent",
+        "rationale",
+        "evidence"
+      ],
+      "title": "ChannelAllocation",
+      "type": "object"
+    },
+    "Claim": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "classification": {
+                "enum": [
+                  "fact",
+                  "inference"
+                ]
+              }
+            },
+            "required": [
+              "classification"
+            ]
+          },
+          "then": {
+            "properties": {
+              "source_ids": {
+                "minItems": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "classification": {
+                "const": "gap"
+              }
+            },
+            "required": [
+              "classification"
+            ]
+          },
+          "then": {
+            "properties": {
+              "confidence": {
+                "const": 0
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "claim_id": {
+          "format": "uuid",
+          "title": "Claim Id",
+          "type": "string"
+        },
+        "classification": {
+          "enum": [
+            "fact",
+            "inference",
+            "assumption",
+            "gap"
+          ],
+          "title": "Classification",
+          "type": "string"
+        },
+        "statement": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Statement",
+          "type": "string"
+        },
+        "source_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "rationale": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "geographic_scope": {
+          "enum": [
+            "india",
+            "global",
+            "unknown"
+          ],
+          "title": "Geographic Scope",
+          "type": "string"
+        }
+      },
+      "required": [
+        "claim_id",
+        "classification",
+        "statement",
+        "source_ids",
+        "confidence",
+        "rationale",
+        "geographic_scope"
+      ],
+      "title": "Claim",
+      "type": "object"
+    },
+    "Gap": {
+      "additionalProperties": false,
+      "properties": {
+        "field": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Field",
+          "type": "string"
+        },
+        "question": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Question",
+          "type": "string"
+        },
+        "critical": {
+          "title": "Critical",
+          "type": "boolean"
+        },
+        "reason": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "field",
+        "question",
+        "critical",
+        "reason"
+      ],
+      "title": "Gap",
+      "type": "object"
+    },
+    "KPI": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "definition": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Definition",
+          "type": "string"
+        },
+        "unit": {
+          "enum": [
+            "count",
+            "percent",
+            "ratio",
+            "INR",
+            "days"
+          ],
+          "title": "Unit",
+          "type": "string"
+        },
+        "baseline": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Baseline"
+        },
+        "target_min": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Target Min"
+        },
+        "target_max": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Target Max"
+        },
+        "measurement_source": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Measurement Source",
+          "type": "string"
+        },
+        "review_day": {
+          "maximum": 30,
+          "minimum": 1,
+          "title": "Review Day",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "name",
+        "definition",
+        "unit",
+        "baseline",
+        "target_min",
+        "target_max",
+        "measurement_source",
+        "review_day"
+      ],
+      "title": "KPI",
+      "type": "object"
+    },
+    "Money": {
+      "additionalProperties": false,
+      "properties": {
+        "currency": {
+          "const": "INR",
+          "default": "INR",
+          "title": "Currency",
+          "type": "string"
+        },
+        "amount_paise": {
+          "minimum": 0,
+          "title": "Amount Paise",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "amount_paise"
+      ],
+      "title": "Money",
+      "type": "object"
+    },
+    "MoneyRange": {
+      "additionalProperties": false,
+      "properties": {
+        "minimum": {
+          "$ref": "#/$defs/Money"
+        },
+        "maximum": {
+          "$ref": "#/$defs/Money"
+        }
+      },
+      "required": [
+        "minimum",
+        "maximum"
+      ],
+      "title": "MoneyRange",
+      "type": "object"
+    },
+    "StrategyOption": {
+      "additionalProperties": false,
+      "properties": {
+        "option_id": {
+          "format": "uuid",
+          "title": "Option Id",
+          "type": "string"
+        },
+        "name": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "thesis": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Thesis",
+          "type": "string"
+        },
+        "primary_icp": {
+          "$ref": "#/$defs/AudienceSegment"
+        },
+        "core_offer": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Core Offer",
+          "type": "string"
+        },
+        "positioning": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Positioning",
+          "type": "string"
+        },
+        "messaging": {
+          "items": {
+            "maxLength": 10000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Messaging",
+          "type": "array"
+        },
+        "channel_allocation": {
+          "items": {
+            "$ref": "#/$defs/ChannelAllocation"
+          },
+          "minItems": 1,
+          "title": "Channel Allocation",
+          "type": "array"
+        },
+        "funnel": {
+          "items": {
+            "maxLength": 10000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Funnel",
+          "type": "array"
+        },
+        "kpis": {
+          "items": {
+            "$ref": "#/$defs/KPI"
+          },
+          "minItems": 1,
+          "title": "Kpis",
+          "type": "array"
+        },
+        "expected_revenue_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MoneyRange"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "forecast_assumptions": {
+          "items": {
+            "maxLength": 10000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Forecast Assumptions",
+          "type": "array"
+        },
+        "required_assets_data": {
+          "items": {
+            "maxLength": 10000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Required Assets Data",
+          "type": "array"
+        },
+        "execution_priorities": {
+          "items": {
+            "maxLength": 10000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Execution Priorities",
+          "type": "array"
+        },
+        "assumptions": {
+          "items": {
+            "$ref": "#/$defs/Claim"
+          },
+          "title": "Assumptions",
+          "type": "array"
+        },
+        "risks": {
+          "items": {
+            "maxLength": 10000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Risks",
+          "type": "array"
+        },
+        "tradeoffs": {
+          "items": {
+            "maxLength": 10000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Tradeoffs",
+          "type": "array"
+        },
+        "failure_scenarios": {
+          "items": {
+            "maxLength": 10000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Failure Scenarios",
+          "type": "array"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/Claim"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        }
+      },
+      "required": [
+        "option_id",
+        "name",
+        "thesis",
+        "primary_icp",
+        "core_offer",
+        "positioning",
+        "messaging",
+        "channel_allocation",
+        "funnel",
+        "kpis",
+        "expected_revenue_range",
+        "forecast_assumptions",
+        "required_assets_data",
+        "execution_priorities",
+        "assumptions",
+        "risks",
+        "tradeoffs",
+        "failure_scenarios",
+        "evidence",
+        "confidence"
+      ],
+      "title": "StrategyOption",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "brand_id": {
+      "format": "uuid",
+      "title": "Brand Id",
+      "type": "string"
+    },
+    "approved_profile_id": {
+      "format": "uuid",
+      "title": "Approved Profile Id",
+      "type": "string"
+    },
+    "dossier_id": {
+      "format": "uuid",
+      "title": "Dossier Id",
+      "type": "string"
+    },
+    "options": {
+      "items": {
+        "$ref": "#/$defs/StrategyOption"
+      },
+      "maxItems": 3,
+      "minItems": 2,
+      "title": "Options",
+      "type": "array"
+    },
+    "recommended_option_id": {
+      "format": "uuid",
+      "title": "Recommended Option Id",
+      "type": "string"
+    },
+    "recommendation_reason": {
+      "maxLength": 10000,
+      "minLength": 1,
+      "title": "Recommendation Reason",
+      "type": "string"
+    },
+    "contrarian_view": {
+      "maxLength": 10000,
+      "minLength": 1,
+      "title": "Contrarian View",
+      "type": "string"
+    },
+    "decision_required": {
+      "maxLength": 10000,
+      "minLength": 1,
+      "title": "Decision Required",
+      "type": "string"
+    },
+    "missing_inputs": {
+      "items": {
+        "$ref": "#/$defs/Gap"
+      },
+      "title": "Missing Inputs",
+      "type": "array"
+    }
+  },
+  "required": [
+    "brand_id",
+    "approved_profile_id",
+    "dossier_id",
+    "options",
+    "recommended_option_id",
+    "recommendation_reason",
+    "contrarian_view",
+    "decision_required",
+    "missing_inputs"
+  ],
+  "title": "StrategyOptions",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:marketing-intelligence:strategy-options:1.0"
+}

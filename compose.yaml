@@ -1,0 +1,93 @@
+x-research-config: &research-config
+  MI_ALLOW_MODEL_CALLS: ${MI_ALLOW_MODEL_CALLS:-false}
+  MI_MODEL_PROVIDER: ${MI_MODEL_PROVIDER:-disabled}
+  MI_ANTHROPIC_API_KEY: ${MI_ANTHROPIC_API_KEY:-}
+  MI_ANTHROPIC_MODEL: ${MI_ANTHROPIC_MODEL:-}
+  MI_ANTHROPIC_VERSION: ${MI_ANTHROPIC_VERSION:-2026-10-21}
+  MI_ALLOW_SEARCH_CALLS: ${MI_ALLOW_SEARCH_CALLS:-false}
+  MI_BRAVE_API_KEY: ${MI_BRAVE_API_KEY:-}
+  MI_RESEARCH_MAX_INPUT_TOKENS: ${MI_RESEARCH_MAX_INPUT_TOKENS:-16000}
+  MI_RESEARCH_MAX_OUTPUT_TOKENS: ${MI_RESEARCH_MAX_OUTPUT_TOKENS:-4096}
+  MI_ALLOW_PLANNING_CALLS: ${MI_ALLOW_PLANNING_CALLS:-false}
+  MI_PLANNING_MAX_INPUT_TOKENS: ${MI_PLANNING_MAX_INPUT_TOKENS:-24000}
+  MI_PLANNING_MAX_OUTPUT_TOKENS: ${MI_PLANNING_MAX_OUTPUT_TOKENS:-8192}
+# Optional price/cost fields: add them here after setting valid integer rates/date.
+# Omit unset integer fields; an empty string is not an optional integer.
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: marketing_intelligence
+      POSTGRES_USER: migration_owner
+      POSTGRES_PASSWORD: ${MI_POSTGRES_PASSWORD:?Set MI_POSTGRES_PASSWORD}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U migration_owner -d marketing_intelligence"]
+      interval: 3s
+      timeout: 3s
+      retries: 15
+  migrate:
+    build: .
+    profiles: ["admin"]
+    command: ["python", "scripts/migrate.py"]
+    environment:
+      MI_MIGRATION_DATABASE_URL: ${MI_MIGRATION_DATABASE_URL:?Set administrative URL with host postgres for Compose}
+    depends_on:
+      postgres:
+        condition: service_healthy
+  api:
+    build: .
+    ports:
+      - "127.0.0.1:8000:8000"
+    environment:
+      <<: *research-config
+      MI_DATABASE_URL: ${MI_DATABASE_URL:?Set restricted runtime URL with host postgres for Compose}
+      MI_JWT_SECRET: ${MI_JWT_SECRET:?Set a random JWT secret}
+      MI_ALLOW_SIGNUP: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+  worker:
+    build: .
+    profiles: ["workers"]
+    command: ["python", "-m", "app.worker"]
+    environment:
+      MI_DATABASE_URL: ${MI_WORKER_DATABASE_URL:?Set a separate worker runtime URL}
+      MI_SERVICE_USER_ID: ${MI_SERVICE_USER_ID:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+  research-worker:
+    build: .
+    profiles: ["research"]
+    command: ["python", "-m", "app.research_worker"]
+    environment:
+      <<: *research-config
+      MI_DATABASE_URL: ${MI_RESEARCH_WORKER_DATABASE_URL:?Set a dedicated research worker URL}
+      MI_SERVICE_USER_ID: ${MI_RESEARCH_SERVICE_USER_ID:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+  planning-worker:
+    build: .
+    profiles: ["planning"]
+    command: ["python", "-m", "app.planning_worker"]
+    environment:
+      MI_DATABASE_URL: ${MI_PLANNING_WORKER_DATABASE_URL:?Set a dedicated planning worker URL}
+      MI_SERVICE_USER_ID: ${MI_PLANNING_SERVICE_USER_ID:-}
+      MI_ALLOW_MODEL_CALLS: ${MI_ALLOW_MODEL_CALLS:-false}
+      MI_ALLOW_PLANNING_CALLS: ${MI_ALLOW_PLANNING_CALLS:-false}
+      MI_MODEL_PROVIDER: ${MI_MODEL_PROVIDER:-disabled}
+      MI_ANTHROPIC_API_KEY: ${MI_ANTHROPIC_API_KEY:-}
+      MI_ANTHROPIC_MODEL: ${MI_ANTHROPIC_MODEL:-}
+      MI_ANTHROPIC_VERSION: ${MI_ANTHROPIC_VERSION:-2026-10-21}
+      MI_PLANNING_MAX_INPUT_TOKENS: ${MI_PLANNING_MAX_INPUT_TOKENS:-24000}
+      MI_PLANNING_MAX_OUTPUT_TOKENS: ${MI_PLANNING_MAX_OUTPUT_TOKENS:-8192}
+    depends_on:
+      postgres:
+        condition: service_healthy
+volumes:
+  postgres_data:

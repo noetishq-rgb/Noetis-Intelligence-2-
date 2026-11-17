@@ -1,0 +1,50 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "expected_sequence": {
+      "minimum": 0,
+      "title": "Expected Sequence",
+      "type": "integer"
+    },
+    "action": {
+      "enum": [
+        "accept",
+        "edit",
+        "reject",
+        "request_revision",
+        "mark_unknown"
+      ],
+      "title": "Action",
+      "type": "string"
+    },
+    "text": {
+      "anyOf": [
+        {
+          "maxLength": 10000,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Text"
+    },
+    "reason": {
+      "maxLength": 3000,
+      "minLength": 1,
+      "title": "Reason",
+      "type": "string"
+    }
+  },
+  "required": [
+    "expected_sequence",
+    "action",
+    "reason"
+  ],
+  "title": "FindingReview",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:marketing-intelligence:brain-finding-review:1.0"
+}

@@ -1,0 +1,81 @@
+{
+  "$defs": {
+    "PresenceDraft": {
+      "additionalProperties": false,
+      "properties": {
+        "url": {
+          "maxLength": 2048,
+          "title": "Url",
+          "type": "string"
+        },
+        "platform": {
+          "default": "other",
+          "enum": [
+            "website",
+            "instagram",
+            "linkedin",
+            "facebook",
+            "youtube",
+            "other"
+          ],
+          "title": "Platform",
+          "type": "string"
+        }
+      },
+      "required": [
+        "url"
+      ],
+      "title": "PresenceDraft",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "brand_name": {
+      "default": "",
+      "maxLength": 300,
+      "title": "Brand Name",
+      "type": "string"
+    },
+    "online_presence": {
+      "items": {
+        "$ref": "#/$defs/PresenceDraft"
+      },
+      "maxItems": 12,
+      "title": "Online Presence",
+      "type": "array"
+    },
+    "category": {
+      "default": "",
+      "maxLength": 300,
+      "title": "Category",
+      "type": "string"
+    },
+    "niche": {
+      "default": "",
+      "maxLength": 300,
+      "title": "Niche",
+      "type": "string"
+    },
+    "objectives": {
+      "items": {
+        "maxLength": 300,
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxItems": 8,
+      "title": "Objectives",
+      "type": "array"
+    },
+    "other_objective": {
+      "default": "",
+      "maxLength": 600,
+      "title": "Other Objective",
+      "type": "string"
+    }
+  },
+  "title": "SetupDraft",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:marketing-intelligence:brain-setup:1.0"
+}

@@ -1,0 +1,13 @@
+[project]
+name = "marketing-intelligence"
+version = "0.4.1"
+description = "Multi-tenant marketing intelligence foundation and research backend"
+requires-python = ">=3.12,<3.13"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra"
+
+[tool.vercel]
+entrypoint = "vercel_entry:app"

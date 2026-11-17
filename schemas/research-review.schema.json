@@ -1,0 +1,134 @@
+{
+  "$defs": {
+    "ConflictResolution": {
+      "additionalProperties": false,
+      "properties": {
+        "conflict_id": {
+          "format": "uuid",
+          "title": "Conflict Id",
+          "type": "string"
+        },
+        "selected_claim_id": {
+          "format": "uuid",
+          "title": "Selected Claim Id",
+          "type": "string"
+        },
+        "rationale": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "source_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Source Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "conflict_id",
+        "selected_claim_id",
+        "rationale",
+        "source_ids"
+      ],
+      "title": "ConflictResolution",
+      "type": "object"
+    },
+    "GapResolution": {
+      "additionalProperties": false,
+      "properties": {
+        "field": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Field",
+          "type": "string"
+        },
+        "answer": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Answer",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "client_input",
+            "evidence"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "source_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "field",
+        "answer",
+        "kind",
+        "source_ids"
+      ],
+      "title": "GapResolution",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "expected_workflow_version": {
+      "minimum": 1,
+      "title": "Expected Workflow Version",
+      "type": "integer"
+    },
+    "artifact_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "title": "Artifact Sha256",
+      "type": "string"
+    },
+    "decision": {
+      "enum": [
+        "approved",
+        "revision_requested"
+      ],
+      "title": "Decision",
+      "type": "string"
+    },
+    "reason": {
+      "maxLength": 10000,
+      "minLength": 1,
+      "title": "Reason",
+      "type": "string"
+    },
+    "gap_resolutions": {
+      "items": {
+        "$ref": "#/$defs/GapResolution"
+      },
+      "title": "Gap Resolutions",
+      "type": "array"
+    },
+    "conflict_resolutions": {
+      "items": {
+        "$ref": "#/$defs/ConflictResolution"
+      },
+      "title": "Conflict Resolutions",
+      "type": "array"
+    }
+  },
+  "required": [
+    "expected_workflow_version",
+    "artifact_sha256",
+    "decision",
+    "reason"
+  ],
+  "title": "ResearchReview",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:marketing-intelligence:research-review:1.0"
+}

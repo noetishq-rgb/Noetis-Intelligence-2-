@@ -1,0 +1,10 @@
+{
+  "name": "noetis-intelligence",
+  "version": "0.5.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test frontend/*.test.js",
+    "build": "node scripts/check-web.mjs"
+  }
+}

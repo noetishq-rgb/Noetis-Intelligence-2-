@@ -1,0 +1,638 @@
+{
+  "$defs": {
+    "Citation": {
+      "additionalProperties": false,
+      "properties": {
+        "source_id": {
+          "format": "uuid",
+          "title": "Source Id",
+          "type": "string"
+        },
+        "url": {
+          "format": "uri",
+          "maxLength": 2083,
+          "minLength": 1,
+          "title": "Url",
+          "type": "string"
+        },
+        "publisher": {
+          "anyOf": [
+            {
+              "maxLength": 300,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Publisher"
+        },
+        "published_at": {
+          "anyOf": [
+            {
+              "format": "date",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Published At"
+        },
+        "accessed_at": {
+          "format": "date-time",
+          "title": "Accessed At",
+          "type": "string"
+        },
+        "geographic_scope": {
+          "enum": [
+            "india",
+            "global",
+            "unknown"
+          ],
+          "title": "Geographic Scope",
+          "type": "string"
+        },
+        "applicability_to_india": {
+          "anyOf": [
+            {
+              "maxLength": 10000,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Applicability To India"
+        },
+        "access_limitations": {
+          "items": {
+            "maxLength": 300,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Access Limitations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "source_id",
+        "url",
+        "publisher",
+        "published_at",
+        "accessed_at",
+        "geographic_scope",
+        "applicability_to_india",
+        "access_limitations"
+      ],
+      "title": "Citation",
+      "type": "object"
+    },
+    "Claim": {
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "classification": {
+                "enum": [
+                  "fact",
+                  "inference"
+                ]
+              }
+            },
+            "required": [
+              "classification"
+            ]
+          },
+          "then": {
+            "properties": {
+              "source_ids": {
+                "minItems": 1
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "classification": {
+                "const": "gap"
+              }
+            },
+            "required": [
+              "classification"
+            ]
+          },
+          "then": {
+            "properties": {
+              "confidence": {
+                "const": 0
+              }
+            }
+          }
+        }
+      ],
+      "properties": {
+        "claim_id": {
+          "format": "uuid",
+          "title": "Claim Id",
+          "type": "string"
+        },
+        "classification": {
+          "enum": [
+            "fact",
+            "inference",
+            "assumption",
+            "gap"
+          ],
+          "title": "Classification",
+          "type": "string"
+        },
+        "statement": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Statement",
+          "type": "string"
+        },
+        "source_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "rationale": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Rationale",
+          "type": "string"
+        },
+        "geographic_scope": {
+          "enum": [
+            "india",
+            "global",
+            "unknown"
+          ],
+          "title": "Geographic Scope",
+          "type": "string"
+        }
+      },
+      "required": [
+        "claim_id",
+        "classification",
+        "statement",
+        "source_ids",
+        "confidence",
+        "rationale",
+        "geographic_scope"
+      ],
+      "title": "Claim",
+      "type": "object"
+    },
+    "Gap": {
+      "additionalProperties": false,
+      "properties": {
+        "field": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Field",
+          "type": "string"
+        },
+        "question": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Question",
+          "type": "string"
+        },
+        "critical": {
+          "title": "Critical",
+          "type": "boolean"
+        },
+        "reason": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "field",
+        "question",
+        "critical",
+        "reason"
+      ],
+      "title": "Gap",
+      "type": "object"
+    },
+    "Money": {
+      "additionalProperties": false,
+      "properties": {
+        "currency": {
+          "const": "INR",
+          "default": "INR",
+          "title": "Currency",
+          "type": "string"
+        },
+        "amount_paise": {
+          "minimum": 0,
+          "title": "Amount Paise",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "amount_paise"
+      ],
+      "title": "Money",
+      "type": "object"
+    },
+    "MoneyRange": {
+      "additionalProperties": false,
+      "properties": {
+        "minimum": {
+          "$ref": "#/$defs/Money"
+        },
+        "maximum": {
+          "$ref": "#/$defs/Money"
+        }
+      },
+      "required": [
+        "minimum",
+        "maximum"
+      ],
+      "title": "MoneyRange",
+      "type": "object"
+    },
+    "ObservedText": {
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Value",
+          "type": "string"
+        },
+        "evidence": {
+          "$ref": "#/$defs/Claim"
+        }
+      },
+      "required": [
+        "value",
+        "evidence"
+      ],
+      "title": "ObservedText",
+      "type": "object"
+    },
+    "OnboardingQuestion": {
+      "additionalProperties": false,
+      "properties": {
+        "field": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Field",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "required": {
+          "title": "Required",
+          "type": "boolean"
+        },
+        "input_type": {
+          "enum": [
+            "text",
+            "long_text",
+            "money_range",
+            "list",
+            "url_list"
+          ],
+          "title": "Input Type",
+          "type": "string"
+        },
+        "reason": {
+          "maxLength": 10000,
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "field",
+        "label",
+        "required",
+        "input_type",
+        "reason"
+      ],
+      "title": "OnboardingQuestion",
+      "type": "object"
+    },
+    "Product": {
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "$ref": "#/$defs/ObservedText"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ObservedText"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "price": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Money"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "price_evidence": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Claim"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      },
+      "required": [
+        "name",
+        "description",
+        "price",
+        "price_evidence"
+      ],
+      "title": "Product",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "default": "1.0",
+      "enum": [
+        "1.0",
+        "1.1"
+      ],
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "brand_id": {
+      "format": "uuid",
+      "title": "Brand Id",
+      "type": "string"
+    },
+    "version": {
+      "minimum": 1,
+      "title": "Version",
+      "type": "integer"
+    },
+    "name": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ObservedText"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "website_url": {
+      "anyOf": [
+        {
+          "format": "uri",
+          "maxLength": 2083,
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Website Url"
+    },
+    "business_description": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ObservedText"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "business_model": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ObservedText"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "positioning": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ObservedText"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "products_services": {
+      "items": {
+        "$ref": "#/$defs/Product"
+      },
+      "title": "Products Services",
+      "type": "array"
+    },
+    "target_geographies": {
+      "items": {
+        "maxLength": 300,
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Target Geographies",
+      "type": "array"
+    },
+    "geography_evidence": {
+      "items": {
+        "$ref": "#/$defs/Claim"
+      },
+      "title": "Geography Evidence",
+      "type": "array"
+    },
+    "audience_description": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ObservedText"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "objectives": {
+      "items": {
+        "maxLength": 300,
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Objectives",
+      "type": "array"
+    },
+    "budget_range": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/MoneyRange"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "pricing_margin_notes": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ObservedText"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "constraints": {
+      "items": {
+        "maxLength": 300,
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Constraints",
+      "type": "array"
+    },
+    "languages": {
+      "items": {
+        "pattern": "^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$",
+        "type": "string"
+      },
+      "title": "Languages",
+      "type": "array"
+    },
+    "competitors": {
+      "items": {
+        "maxLength": 300,
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Competitors",
+      "type": "array"
+    },
+    "conversion_paths": {
+      "items": {
+        "format": "uri",
+        "maxLength": 2083,
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Conversion Paths",
+      "type": "array"
+    },
+    "proof_points": {
+      "items": {
+        "$ref": "#/$defs/Claim"
+      },
+      "title": "Proof Points",
+      "type": "array"
+    },
+    "sources": {
+      "items": {
+        "$ref": "#/$defs/Citation"
+      },
+      "title": "Sources",
+      "type": "array"
+    },
+    "missing_inputs": {
+      "items": {
+        "$ref": "#/$defs/Gap"
+      },
+      "title": "Missing Inputs",
+      "type": "array"
+    },
+    "onboarding_questions": {
+      "items": {
+        "$ref": "#/$defs/OnboardingQuestion"
+      },
+      "title": "Onboarding Questions",
+      "type": "array"
+    },
+    "data_quality_warnings": {
+      "items": {
+        "maxLength": 10000,
+        "minLength": 1,
+        "type": "string"
+      },
+      "title": "Data Quality Warnings",
+      "type": "array"
+    },
+    "approval_status": {
+      "default": "draft",
+      "enum": [
+        "draft",
+        "confirmed"
+      ],
+      "title": "Approval Status",
+      "type": "string"
+    }
+  },
+  "required": [
+    "brand_id",
+    "version",
+    "name",
+    "website_url",
+    "business_description",
+    "business_model",
+    "positioning",
+    "products_services",
+    "target_geographies",
+    "geography_evidence",
+    "audience_description",
+    "objectives",
+    "budget_range",
+    "pricing_margin_notes",
+    "constraints",
+    "languages",
+    "competitors",
+    "conversion_paths",
+    "proof_points",
+    "sources",
+    "missing_inputs",
+    "onboarding_questions",
+    "data_quality_warnings"
+  ],
+  "title": "BrandProfileV11",
+  "type": "object",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:marketing-intelligence:brand-profile-v1.1:1.1"
+}
