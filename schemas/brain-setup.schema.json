@@ -1,5 +1,43 @@
 {
   "$defs": {
+    "Money": {
+      "additionalProperties": false,
+      "properties": {
+        "currency": {
+          "const": "INR",
+          "default": "INR",
+          "title": "Currency",
+          "type": "string"
+        },
+        "amount_paise": {
+          "minimum": 0,
+          "title": "Amount Paise",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "amount_paise"
+      ],
+      "title": "Money",
+      "type": "object"
+    },
+    "MoneyRange": {
+      "additionalProperties": false,
+      "properties": {
+        "minimum": {
+          "$ref": "#/$defs/Money"
+        },
+        "maximum": {
+          "$ref": "#/$defs/Money"
+        }
+      },
+      "required": [
+        "minimum",
+        "maximum"
+      ],
+      "title": "MoneyRange",
+      "type": "object"
+    },
     "PresenceDraft": {
       "additionalProperties": false,
       "properties": {
@@ -31,6 +69,15 @@
   },
   "additionalProperties": false,
   "properties": {
+    "research_intake_version": {
+      "default": 0,
+      "enum": [
+        0,
+        1
+      ],
+      "title": "Research Intake Version",
+      "type": "integer"
+    },
     "brand_name": {
       "default": "",
       "maxLength": 300,
@@ -72,6 +119,45 @@
       "maxLength": 600,
       "title": "Other Objective",
       "type": "string"
+    },
+    "business_description": {
+      "default": "",
+      "maxLength": 10000,
+      "title": "Business Description",
+      "type": "string"
+    },
+    "audience_description": {
+      "default": "",
+      "maxLength": 10000,
+      "title": "Audience Description",
+      "type": "string"
+    },
+    "target_geographies": {
+      "items": {
+        "maxLength": 300,
+        "minLength": 1,
+        "type": "string"
+      },
+      "maxItems": 12,
+      "title": "Target Geographies",
+      "type": "array"
+    },
+    "primary_objective": {
+      "default": "",
+      "maxLength": 2000,
+      "title": "Primary Objective",
+      "type": "string"
+    },
+    "budget_range": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/MoneyRange"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     }
   },
   "title": "SetupDraft",

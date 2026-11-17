@@ -62,19 +62,75 @@ def submit(brand_id:UUID,session_id:UUID,body:VersionAction,user=Depends(current
     b=access(connection,brand_id,True);lock_key(connection,'brain:'+str(brand_id));old=session(connection,brand_id,session_id)
     if old['version']!=body.expected_version:raise HTTPException(409,'Draft changed; reload before submitting')
     if old['status']=='submitted':return old
-    try:SetupDraft.model_validate(old['draft']).require_complete()
+    try:details=SetupDraft.model_validate(old['draft']).require_complete()
     except ValueError as exc:raise HTTPException(422,str(exc))
     # Owner-issued empty workspaces accept client inputs before provider setup.
     if b['intake'].get('client_onboarding'):
         connection.execute('SELECT mi.submit_client_setup(%s,%s)',(brand_id,Jsonb(old['draft'])))
     elif not old['crawl_job_id']:
         raise HTTPException(409,'An authorized team member must start the existing public-capture workflow')
-    return connection.execute("UPDATE mi.brand_onboarding_sessions SET status='submitted',version=version+1,updated_at=now() WHERE id=%s AND brand_id=%s RETURNING *",(session_id,brand_id)).fetchone()
+    response_id=None
+    if details.research_intake_version==1:
+        previous=connection.execute('SELECT coalesce(max(version),0) AS version FROM mi.onboarding_responses WHERE brand_id=%s AND respondent_id=%s',(brand_id,user['id'])).fetchone()['version']
+        response_id=connection.execute("INSERT INTO mi.onboarding_responses(organization_id,brand_id,respondent_id,version,status,answers,submitted_at) VALUES(%s,%s,%s,%s,'submitted',%s,now()) RETURNING id",(b['organization_id'],brand_id,user['id'],previous+1,Jsonb(details.research_answers().model_dump(mode='json')))).fetchone()['id']
+    return connection.execute("UPDATE mi.brand_onboarding_sessions SET status='submitted',onboarding_response_id=%s,version=version+1,updated_at=now() WHERE id=%s AND brand_id=%s RETURNING *",(response_id,session_id,brand_id)).fetchone()
+
+
+@router.post('/sessions/{session_id}/confirm-intake')
+def confirm_intake(brand_id:UUID,session_id:UUID,body:VersionAction,user=Depends(current_user),connection=Depends(actor_transaction)):
+    from app.main import confirm_profile
+    from app.api_types import ProfileConfirm
+    b=access(connection,brand_id,True);require_admin(connection,b['organization_id'])
+    lock_key(connection,'brain:'+str(brand_id));s=session(connection,brand_id,session_id)
+    if s['version']!=body.expected_version or s['status']!='submitted' or session(connection,brand_id)['id']!=session_id:
+        raise HTTPException(409,'Review the current submitted intake before confirming')
+    details=SetupDraft.model_validate(s['draft'])
+    if details.research_intake_version!=1:
+        raise HTTPException(409,'Complete the detailed research form first')
+    try:details.require_complete()
+    except ValueError as exc:raise HTTPException(422,str(exc))
+    job=connection.execute("SELECT status FROM mi.jobs WHERE id=%s AND brand_id=%s AND kind='website_crawl'",(s['crawl_job_id'],brand_id)).fetchone()
+    if not job or job['status']!='succeeded':raise HTTPException(409,'Complete public website capture before reviewing the profile')
+    profile=latest_profile(connection,brand_id)
+    if not profile:raise HTTPException(409,'A captured draft profile is required')
+    if profile and profile['status']=='confirmed':return profile['profile']
+    response=connection.execute("SELECT id FROM mi.onboarding_responses WHERE brand_id=%s AND id=%s AND status='submitted' AND answers=%s",(brand_id,s['onboarding_response_id'],Jsonb(details.research_answers().model_dump(mode='json')))).fetchone()
+    if not response:raise HTTPException(409,'A matching submitted research intake is required')
+    connection.execute("SELECT set_config('app.onboarding_response_id',%s,true)",(str(response['id']),))
+    connection.execute('SELECT mi.submit_intake(%s)',(brand_id,))
+    return confirm_profile(brand_id,ProfileConfirm(expected_profile_version=profile['version'],onboarding_response_id=response['id']),user,connection)
+
+
+@router.post('/sessions/{session_id}/research-pilot')
+def run_session_pilot(brand_id:UUID,session_id:UUID,body:VersionAction,user=Depends(current_user)):
+    from app.config import settings
+    from app.db import transaction
+    from app.research_pilot import run_pilot
+    with transaction(user['id']) as c:
+        b=access(c,brand_id,True);require_admin(c,b['organization_id']);s=session(c,brand_id,session_id)
+        if s['version']!=body.expected_version or s['status']!='submitted' or session(c,brand_id)['id']!=session_id:
+            raise HTTPException(409,'Use the current submitted intake')
+        if settings().research_pilot_brand_id!=brand_id:
+            raise HTTPException(503,'This brand does not have a configured research pilot')
+    # The caller transaction is closed before the bound worker writes audit rows.
+    try:
+        result=run_pilot('run')
+    finally:
+        with transaction(user['id']) as c:
+            job=c.execute("SELECT id FROM mi.jobs WHERE brand_id=%s AND kind='research' ORDER BY created_at DESC LIMIT 1",(brand_id,)).fetchone()
+            if job:
+                c.execute('UPDATE mi.brand_onboarding_sessions SET research_job_id=%s,version=version+1,updated_at=now() WHERE id=%s AND brand_id=%s AND research_job_id IS DISTINCT FROM %s',(job['id'],session_id,brand_id,job['id']))
+    with transaction(user['id']) as c:
+        result['session']=session(c,brand_id,session_id)
+    return result
 
 
 @router.get('/sessions/{session_id}/progress')
 def progress(brand_id:UUID,session_id:UUID,connection=Depends(actor_transaction)):
     b=access(connection,brand_id);s=session(connection,brand_id,session_id)
+    details=SetupDraft.model_validate(s['draft']);missing=details.missing_research_inputs()
+    internal=bscope(connection,brand_id,'internal:read')
+    profile=latest_profile(connection,brand_id) if internal else None
     job=connection.execute('SELECT mi.brain_job_status(%s,%s) AS job',(brand_id,s['crawl_job_id'])).fetchone()['job'] if s['crawl_job_id'] else None
     # Broader research remains the existing human/provider-gated workflow. Reflect it if one exists.
     research=connection.execute('SELECT mi.brain_job_status(%s,%s) AS job',(brand_id,s['research_job_id'])).fetchone()['job'] if s['research_job_id'] else None
@@ -95,6 +151,8 @@ def progress(brand_id:UUID,session_id:UUID,connection=Depends(actor_transaction)
     waiting_configuration=s['status']=='submitted' and not job
     state='created' if s['status']=='draft' and (not job or not b['intake'].get('client_onboarding')) else 'awaiting_configuration' if waiting_configuration else 'failed' if failed or research_failed else 'completed' if v and research_done else 'awaiting_input' if done else 'running' if job and job['status']=='running' else 'cancelled' if job and job['status']=='cancelled' else 'queued'
     return {'session_id':s['id'],'state':state,'capture_job':job,'research_job':research,'stages':stages,'sources':sources,'source_count':len(sources),'version_id':v['id'] if v else None,
+        'missing_research_inputs':missing,'profile_confirmed':profile['status']=='confirmed' if profile else None,
+        'pending_action':'complete_research_inputs' if missing else 'capture_website' if not done else 'review_profile' if not research else 'review_research' if research_done else 'research_job',
         'can_synthesise':done and s['status']=='submitted' and bscope(connection,brand_id,'internal:read'),'can_retry':failed and bscope(connection,brand_id,'crawl:run'),
         'activity':'Your brand details are saved. Your agency can review them now; research and API connections will be configured separately.' if waiting_configuration else 'The research job failed. Review the recorded error and existing workflow gates before requesting another run.' if research_failed else 'The existing research worker is running; its output remains unconfirmed.' if research and research['status']=='running' else 'Captured public pages are ready for review. Audience and market research require the existing confirmed intake, provider and explicit research start.' if done else 'Waiting for the existing public-capture worker.' if not failed else 'Public capture failed; review access limitations before retrying.','error':research['last_error'] if research_failed else job['last_error'] if job else None}
 

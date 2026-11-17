@@ -2422,6 +2422,138 @@
         }
       }
     },
+    "/v1/brands/{brand_id}/brain/sessions/{session_id}/confirm-intake": {
+      "post": {
+        "tags": [
+          "Brand Brain"
+        ],
+        "summary": "Confirm Intake",
+        "operationId": "confirm_intake_v1_brands__brand_id__brain_sessions__session_id__confirm_intake_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "brand_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Brand Id"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VersionAction"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/brands/{brand_id}/brain/sessions/{session_id}/research-pilot": {
+      "post": {
+        "tags": [
+          "Brand Brain"
+        ],
+        "summary": "Run Session Pilot",
+        "operationId": "run_session_pilot_v1_brands__brand_id__brain_sessions__session_id__research_pilot_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "brand_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Brand Id"
+            }
+          },
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "title": "Session Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VersionAction"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/v1/brands/{brand_id}/brain/sessions/{session_id}/progress": {
       "get": {
         "tags": [
@@ -8641,6 +8773,15 @@
       },
       "SetupDraft": {
         "properties": {
+          "research_intake_version": {
+            "type": "integer",
+            "enum": [
+              0,
+              1
+            ],
+            "title": "Research Intake Version",
+            "default": 0
+          },
           "brand_name": {
             "type": "string",
             "maxLength": 300,
@@ -8682,6 +8823,44 @@
             "maxLength": 600,
             "title": "Other Objective",
             "default": ""
+          },
+          "business_description": {
+            "type": "string",
+            "maxLength": 10000,
+            "title": "Business Description",
+            "default": ""
+          },
+          "audience_description": {
+            "type": "string",
+            "maxLength": 10000,
+            "title": "Audience Description",
+            "default": ""
+          },
+          "target_geographies": {
+            "items": {
+              "type": "string",
+              "maxLength": 300,
+              "minLength": 1
+            },
+            "type": "array",
+            "maxItems": 12,
+            "title": "Target Geographies"
+          },
+          "primary_objective": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Primary Objective",
+            "default": ""
+          },
+          "budget_range": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MoneyRange"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,

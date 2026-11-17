@@ -9,7 +9,7 @@ The entire live app is Brand Brain. The owner manages access in `/owner`; client
 3. Leave **Temporary password** blank to generate a strong password, or enter at least 12 characters.
 4. Select **Create brand login**. Copy the login details and share them privately with the client. They appear once; the app cannot retrieve a password later. No email is sent automatically.
 5. The client opens `/login`, enters their email and temporary password, chooses their own password, and lands directly in their Brand Brain.
-6. The client fills in their brand name, online presence, category and objectives. Partial drafts save to their assigned workspace. After submission, the owner can see **Submitted** and open the Brand Brain to review the submitted information.
+6. The client fills in their brand name, online presence, category, objectives, business description, audience, target markets, one priority objective and monthly marketing budget in INR. Partial drafts save to their assigned workspace. Submission also creates the detailed research intake with the client recorded as its respondent. The marketing budget is separate from the Claude pilot allowance.
 
 Each managed login has a distinct email address and is dedicated to its assigned brand. Existing emails cannot be overwritten or silently assigned to a different client. If several people need access, arrange separate identities rather than circulating a shared password.
 
@@ -51,3 +51,7 @@ Creating a client or submitting their setup performs no marketing API or model c
 ## Start public website capture
 
 For a configured pilot brand, open its Brand Brain as an owner. Enter the official website in **Start with public website evidence**, then select **Queue website capture**. Use **Capture status** to inspect progress and sources. **Run worker now** performs one bounded pass immediately; the signed GitHub schedule also checks every five minutes and may be delayed by GitHub. Draft onboarding remains editable and unknown facts stay blank. Once the client completes and submits setup, the owner can organize the captured evidence into a review draft. This performs no model or marketing API call.
+
+After capture, open **Capture status** and review the **Research intake review** panel. **Confirm research profile** advances the selected current client submission through the existing profile approval checks. It does not approve research findings. **Run research pilot** then invokes the configured one-generation worker and links its real job back to this session so the client sees actual research status. Clients cannot confirm intake or start paid jobs. A successful dossier still needs evidence and human quality review; a larger research programme requires more sources and a separate allowance.
+
+An administrator may use `scripts/reset_test_brand.py` to render a reset for an explicitly requested, idle pre-research test workspace. It refuses model dispatches, research/planning jobs and approvals. Execution requires database administration privileges; it is not a web endpoint. Source snapshots, draft artifacts, sessions and test inputs are deleted transactionally for the exact brand, with FKs and audit recording active. Login accounts, memberships, service bindings, system templates and audit hashes are preserved. The next page load creates an empty onboarding session.
