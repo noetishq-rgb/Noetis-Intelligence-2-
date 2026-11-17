@@ -12,6 +12,7 @@ def test_managed_compatibility_keeps_original_files_and_uses_read_policies(owner
     assert not rows['rolcanlogin'] and not rows['rolsuper']
     forced=owner.execute("SELECT count(*) AS n FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='mi' AND c.relkind='r' AND c.relrowsecurity AND c.relforcerowsecurity").fetchone()['n']
     assert forced>=30
+    assert owner.execute("SELECT count(*) AS n FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname IN('mi','identity') AND NOT EXISTS(SELECT 1 FROM unnest(p.proconfig) config WHERE config LIKE 'search_path=%')").fetchone()['n']==0
     if not rows['rolbypassrls']:
         assert owner.execute("SELECT count(*) AS n FROM pg_policies WHERE policyname='managed_guard_read'").fetchone()['n']>10
         assert owner.execute("SELECT count(*) AS n FROM pg_policies WHERE policyname='managed_guard_update'").fetchone()['n']==1

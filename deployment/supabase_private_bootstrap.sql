@@ -2004,3 +2004,21 @@ REVOKE EXECUTE ON FUNCTION mi.digest(bytea,text),mi.digest(text,text) FROM PUBLI
 GRANT EXECUTE ON FUNCTION mi.digest(bytea,text),mi.digest(text,text) TO mi_app,mi_guard;
 REVOKE CREATE ON SCHEMA mi FROM mi_guard;
 INSERT INTO mi_meta.schema_migrations(name,sha256,profile,effective_sha256) VALUES('030_brand_brain_social_profile.sql','50ca4bd0152b275eeca7247d4e12393808147361a7baf2bac9ab132ca3d90fc5','supabase','53b45e0a7c2bdfcc4542e65853ec8efb64db1c1b55b3685f5435e65c5181ffb7');
+-- Source: 031_function_search_paths.sql
+
+-- Pin resolution for invoker helpers and triggers in the new private app only.
+ALTER FUNCTION mi.can_org_admin(uuid) SET search_path=pg_catalog;
+ALTER FUNCTION mi.staff_brand(uuid) SET search_path=pg_catalog;
+ALTER FUNCTION mi.reject_mutation() SET search_path=pg_catalog;
+ALTER FUNCTION mi.guard_approval() SET search_path=pg_catalog;
+ALTER FUNCTION mi.disabled_integration() SET search_path=pg_catalog;
+ALTER FUNCTION mi.validate_workflow_initialization() SET search_path=pg_catalog;
+ALTER FUNCTION mi.guard_dispatch() SET search_path=pg_catalog;
+ALTER FUNCTION mi.guard_phase4_review_checks() SET search_path=pg_catalog;
+ALTER FUNCTION mi.guard_planning_task_owner() SET search_path=pg_catalog;
+ALTER FUNCTION mi.guard_task_dependency_plan() SET search_path=pg_catalog;
+ALTER FUNCTION mi.brain_read(uuid) SET search_path=pg_catalog;
+ALTER FUNCTION mi.brain_write(uuid) SET search_path=pg_catalog;
+ALTER FUNCTION mi.brain_identity_guard() SET search_path=pg_catalog;
+
+INSERT INTO mi_meta.schema_migrations(name,sha256,profile,effective_sha256) VALUES('031_function_search_paths.sql','a8b6d1e9b745cd62cba9b1bac21cf34bdfeadfd74f2d7dbc9541bff3808b446d','supabase','1eb01e9e3956d12ba264896dd17344e2dcca9148fbaf455c0689ae4a2488e907');
