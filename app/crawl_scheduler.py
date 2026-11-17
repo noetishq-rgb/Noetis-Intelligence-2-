@@ -2,6 +2,7 @@
 from functools import lru_cache
 from uuid import UUID
 import jwt
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
 from app.auth import current_user,require_admin,require_brand
 from app.config import settings
@@ -30,7 +31,10 @@ def verify_scheduler(request:Request):
     except (jwt.PyJWTError,ValueError,TypeError):raise HTTPException(401,'Invalid workflow identity')
     expected={'repository':REPOSITORY,'repository_id':'1460555916','ref':'refs/heads/main',
               'workflow_ref':WORKFLOW,'sub':'repo:'+REPOSITORY+':ref:refs/heads/main'}
-    if any(claims.get(k)!=v for k,v in expected.items()) or claims['event_name'] not in {'schedule','workflow_dispatch','push'}:
+    mismatched=[k for k,v in expected.items() if claims.get(k)!=v]
+    if claims['event_name'] not in {'schedule','workflow_dispatch','push'}:mismatched.append('event_name')
+    if mismatched:
+        logging.getLogger(__name__).warning('scheduler_identity_rejected fields=%s',','.join(mismatched))
         raise HTTPException(403,'Workflow is not authorized')
     return claims
 

@@ -1,5 +1,5 @@
 """Invoke one Vercel crawl using GitHub OIDC. No database/provider secrets in Actions."""
-import json,os,time
+import base64,json,os,time
 from urllib.parse import urlencode,urlsplit,urlunsplit,parse_qsl
 from urllib.request import Request,urlopen
 from urllib.error import HTTPError
@@ -25,7 +25,19 @@ def main():
             print(json.dumps({'processed':result['processed'],'job_status':(result.get('job') or {}).get('status','idle')}));return
         except HTTPError as error:
             # During a Git deployment, the previous static fallback answers POST with 405.
-            if error.code not in {404,405,503} or attempt==11:raise SystemExit('Hosted worker returned HTTP '+str(error.code))
+            if error.code not in {404,405,503} or attempt==11:
+                try:
+                    detail=json.loads(error.read(4096)).get('detail')
+                    if isinstance(detail,str):print('Worker response: '+detail[:200])
+                except Exception:pass
+                if error.code==403:
+                    # Public provenance fields only; never log the signed token or credentials.
+                    try:
+                        segment=token.split('.')[1];claims=json.loads(base64.urlsafe_b64decode(segment+'='*(-len(segment)%4)))
+                        fields=['repository','repository_id','ref','workflow_ref','event_name','sub','aud']
+                        print(json.dumps({'workflow_identity':{k:str(claims.get(k,''))[:200] for k in fields}}))
+                    except Exception:pass
+                raise SystemExit('Hosted worker returned HTTP '+str(error.code))
             time.sleep(5)
         except Exception:
             raise SystemExit('Hosted worker did not return a confirmed response; a later pass will recover its durable lease')
