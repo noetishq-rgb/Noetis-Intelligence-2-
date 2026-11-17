@@ -12,6 +12,17 @@ def main():
     if endpoint!=ENDPOINT:raise SystemExit('Unexpected crawl endpoint')
     source=os.environ.get('ACTIONS_ID_TOKEN_REQUEST_URL');credential=os.environ.get('ACTIONS_ID_TOKEN_REQUEST_TOKEN')
     if not source or not credential:raise SystemExit('Run from the authorized GitHub Actions workflow')
+    revision=os.environ.get('GITHUB_SHA')
+    if revision:
+        # Request an identity only after the exact commit is serving production.
+        health=ENDPOINT.rsplit('/internal/crawl',1)[0]+'/health'
+        for attempt in range(24):
+            try:
+                with urlopen(Request(health),timeout=15) as response:
+                    if response.headers.get('X-Noetis-Revision')==revision:break
+            except Exception:pass
+            if attempt==23:raise SystemExit('The expected production revision is not ready; leaving queued work untouched')
+            time.sleep(5)
     url=urlsplit(source)
     if url.scheme!='https' or not url.hostname or not url.hostname.endswith('.actions.githubusercontent.com'):
         raise SystemExit('Unexpected GitHub identity endpoint')

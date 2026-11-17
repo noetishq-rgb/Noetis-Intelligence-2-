@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 from datetime import datetime, timedelta, timezone
 import logging
+import os
 import hmac
 import secrets
 from uuid import UUID, uuid4
@@ -53,6 +54,8 @@ async def request_metadata(request: Request, call_next):
     response.headers["X-Request-ID"] = request_id
     response.headers["Cache-Control"] = "no-store"
     response.headers["X-Content-Type-Options"] = "nosniff"
+    revision=os.environ.get('VERCEL_GIT_COMMIT_SHA')
+    if revision:response.headers['X-Noetis-Revision']=revision
     logger.info("request_complete request_id=%s method=%s status=%s", request_id, request.method, response.status_code)
     return response
 

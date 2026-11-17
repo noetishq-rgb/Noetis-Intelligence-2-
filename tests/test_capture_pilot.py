@@ -71,6 +71,15 @@ def test_scheduler_requires_real_signature_and_exact_workflow(api,scheduler_iden
     assert api.post('/internal/crawl',headers={'Authorization':'Bearer '+forged}).status_code==401
 
 
+def test_scheduler_accepts_github_immutable_repository_subject(api,scheduler_identity):
+    key,claims=scheduler_identity
+    subject='repo:noetishq-rgb@344326924/Noetis-Intelligence-2-@1460555916:ref:refs/heads/main'
+    token=jwt.encode({**claims,'sub':subject},key,algorithm='RS256')
+    assert api.post('/internal/crawl',headers={'Authorization':'Bearer '+token}).status_code==200
+    wrong=jwt.encode({**claims,'sub':subject.replace('@344326924','@123')},key,algorithm='RS256')
+    assert api.post('/internal/crawl',headers={'Authorization':'Bearer '+wrong}).status_code==403
+
+
 @pytest.mark.parametrize('changed',[
     {'aud':'another-project'}, {'repository':'attacker/fork'}, {'repository_id':'1'},
     {'ref':'refs/heads/other'}, {'workflow_ref':'untrusted-workflow'}, {'event_name':'pull_request'},

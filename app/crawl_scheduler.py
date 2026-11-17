@@ -13,6 +13,10 @@ ISSUER='https://token.actions.githubusercontent.com'
 AUDIENCE='noetis-crawl:prj_rByocViGrd5OJlsCEYPqvchdqrSS'
 REPOSITORY='noetishq-rgb/Noetis-Intelligence-2-'
 WORKFLOW=REPOSITORY+'/.github/workflows/workers.yml@refs/heads/main'
+TRUSTED_SUBJECTS={
+    'repo:'+REPOSITORY+':ref:refs/heads/main',
+    'repo:noetishq-rgb@344326924/Noetis-Intelligence-2-@1460555916:ref:refs/heads/main',
+}
 
 
 @lru_cache
@@ -29,9 +33,9 @@ def verify_scheduler(request:Request):
         claims=jwt.decode(token,key,algorithms=['RS256'],issuer=ISSUER,audience=AUDIENCE,
                           options={'require':['exp','iat','nbf','iss','aud','sub','repository','repository_id','ref','workflow_ref','event_name']},leeway=10)
     except (jwt.PyJWTError,ValueError,TypeError):raise HTTPException(401,'Invalid workflow identity')
-    expected={'repository':REPOSITORY,'repository_id':'1460555916','ref':'refs/heads/main',
-              'workflow_ref':WORKFLOW,'sub':'repo:'+REPOSITORY+':ref:refs/heads/main'}
+    expected={'repository':REPOSITORY,'repository_id':'1460555916','ref':'refs/heads/main','workflow_ref':WORKFLOW}
     mismatched=[k for k,v in expected.items() if claims.get(k)!=v]
+    if claims.get('sub') not in TRUSTED_SUBJECTS:mismatched.append('sub')
     if claims['event_name'] not in {'schedule','workflow_dispatch','push'}:mismatched.append('event_name')
     if mismatched:
         logging.getLogger(__name__).warning('scheduler_identity_rejected fields=%s',','.join(mismatched))
