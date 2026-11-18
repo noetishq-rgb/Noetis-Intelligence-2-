@@ -1,5 +1,6 @@
 """Invoke one Vercel crawl using GitHub OIDC. No database/provider secrets in Actions."""
-import base64,json,os,time
+import json,os,time
+from uuid import UUID
 from urllib.parse import urlencode,urlsplit,urlunsplit,parse_qsl
 from urllib.request import Request,urlopen
 from urllib.error import HTTPError
@@ -32,29 +33,41 @@ def main():
     params=dict(parse_qsl(url.query));params['audience']=AUDIENCE
     request=Request(urlunsplit((url.scheme,url.netloc,url.path,urlencode(params),'')),headers={'Authorization':'Bearer '+credential})
     with urlopen(request,timeout=20) as response:token=json.load(response)['value']
+    headers = {'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'}
+    if action:
+        target = endpoint.replace('/internal/crawl', '/internal/research-pilot')
+        request = Request(target, data=json.dumps({'action': action}).encode(), headers=headers)
+        with urlopen(request, timeout=150) as response:
+            print(json.dumps(json.load(response)))
+        return
+
     for attempt in range(12):
         try:
-            target=endpoint.replace('/internal/crawl','/internal/research-pilot') if action else endpoint
-            request=Request(target,data=json.dumps({'action':action}).encode() if action else b'{}',method='POST',headers={'Authorization':'Bearer '+token,'Content-Type':'application/json'})
-            with urlopen(request,timeout=150) as response:result=json.load(response)
-            print(json.dumps(result if action else {'processed':result['processed'],'job_status':(result.get('job') or {}).get('status','idle')}));return
+            with urlopen(Request(endpoint + '/brands', headers=headers), timeout=20) as response:
+                brands = [UUID(item) for item in json.load(response)]
+            break
         except HTTPError as error:
-            # During a Git deployment, the previous static fallback answers POST with 405.
-            if error.code not in {404,405,503} or attempt==11:
-                try:
-                    detail=json.loads(error.read(4096)).get('detail')
-                    if isinstance(detail,str):print('Worker response: '+detail[:200])
-                except Exception:pass
-                if error.code==403:
-                    # Public provenance fields only; never log the signed token or credentials.
-                    try:
-                        segment=token.split('.')[1];claims=json.loads(base64.urlsafe_b64decode(segment+'='*(-len(segment)%4)))
-                        fields=['repository','repository_id','ref','workflow_ref','event_name','sub','aud']
-                        print(json.dumps({'workflow_identity':{k:str(claims.get(k,''))[:200] for k in fields}}))
-                    except Exception:pass
-                raise SystemExit('Hosted worker returned HTTP '+str(error.code))
+            if error.code not in {404,405,503} or attempt == 11:
+                raise SystemExit('Capture discovery returned HTTP ' + str(error.code))
             time.sleep(5)
-        except Exception:
-            raise SystemExit('Hosted worker did not return a confirmed response; a later pass will recover its durable lease')
+    if not brands:
+        raise SystemExit('No hosted capture workers configured')
+    failures = 0
+    for brand in brands:
+        target = endpoint + '?brand_id=' + str(brand)
+        try:
+            with urlopen(Request(target, data=b'{}', headers=headers), timeout=150) as response:
+                result = json.load(response)
+            job = result.get('job') or {}
+            print(json.dumps({'processed': result['processed'], 'job_status': job.get('status', 'idle')}))
+        except HTTPError as error:
+            print('Hosted capture returned HTTP', error.code)
+            failures += 1
+        except (OSError, ValueError):
+            print('Capture response unavailable; the durable job lease controls recovery')
+            failures += 1
+    if failures:
+        raise SystemExit(f'{failures} hosted capture invocation(s) need attention')
+
 
 if __name__=='__main__':main()

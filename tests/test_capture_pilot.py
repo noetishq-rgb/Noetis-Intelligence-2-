@@ -87,3 +87,29 @@ def test_scheduler_accepts_github_immutable_repository_subject(api,scheduler_ide
 def test_scheduler_rejects_other_projects_forks_branches_and_expiry(api,scheduler_identity,changed):
     key,claims=scheduler_identity;token=jwt.encode({**claims,**changed},key,algorithm='RS256')
     assert api.post('/internal/crawl',headers={'Authorization':'Bearer '+token}).status_code in {401,403}
+
+
+def test_hosted_binding_is_selected_by_brand(api, issued, monkeypatch):
+    from app.config import settings, CrawlBinding
+    config = settings()
+    brand = UUID(issued['account']['brand_id'])
+    actor = uuid4()
+    monkeypatch.setattr(config, 'crawl_scheduler_enabled', True)
+    monkeypatch.setattr(config, 'crawl_bindings', {brand: CrawlBinding(service_user_id=actor, database_url='fixture')})
+    assert crawl_scheduler.scheduled_brands() == [str(brand)]
+    assert crawl_scheduler.capture_binding(brand)[0] == actor
+    assert crawl_scheduler.capture_binding(uuid4()) is None
+    assert api.get('/internal/crawl/brands').status_code == 401
+
+
+def test_hosted_queue_declines_unconfigured_brand(api, issued, monkeypatch):
+    from app.config import settings
+    monkeypatch.setattr(settings(), 'crawl_scheduler_enabled', True)
+    base = '/v1/brands/' + issued['account']['brand_id'] + '/brain'
+    h = issued['owner_headers']
+    s = api.post(base + '/sessions', headers=h, json={}).json()
+    url = base + '/sessions/' + s['id']
+    r = api.post(url + '/capture', headers={**h, 'Idempotency-Key': str(uuid4())},
+                 json={'expected_version': s['version'], 'website_url': 'https://example.com/'})
+    assert r.status_code == 503
+    assert api.get(url + '/progress', headers=h).json()['capture_job'] is None

@@ -15,12 +15,15 @@ def test_invoker_waits_for_the_new_deployment_without_printing_identity_token(mo
             response=io.BytesIO(b'{}');response.headers={'X-Noetis-Revision':'old' if len(calls)==1 else 'new-revision'};return response
         if len(calls)==3:return io.BytesIO(json.dumps({'value':'fixture-signed-token'}).encode())
         if len(calls)==4:raise HTTPError(invoker.ENDPOINT,405,'Previous deployment',{},None)
+        if request.full_url.endswith('/brands'):
+            return io.BytesIO(b'["148f2314-a3b3-4dee-a874-f34fd26825c4"]')
+        assert request.full_url.endswith('?brand_id=148f2314-a3b3-4dee-a874-f34fd26825c4')
         return io.BytesIO(json.dumps({'processed':True,'job':{'status':'succeeded'}}).encode())
     monkeypatch.setattr(invoker,'urlopen',open_request);monkeypatch.setattr(invoker.time,'sleep',pauses.append)
     invoker.main();printed=capsys.readouterr().out
     assert json.loads(printed)['job_status']=='succeeded' and pauses==[5,5]
     assert 'fixture-signed-token' not in printed and 'fixture-request-token' not in printed
-    assert len(calls)==5
+    assert len(calls)==6
 
 
 def test_invoker_never_retries_an_authorization_failure(monkeypatch):

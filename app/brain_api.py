@@ -7,6 +7,8 @@ from app.auth import actor_transaction,current_user,require_brand,require_admin
 from app.brain_models import SetupDraft,SessionSave,VersionAction,CaptureStart,FindingReview,ThreadCreate,CommentCreate,ThreadAction,BrainConfirm,CHAPTERS
 from app.repository import lock_key,payload_hash,latest_profile,workflow_for_brand
 from app.services.brain import synthesise,version_row,project,quality,threads
+from app.config import settings
+from app.crawl_scheduler import capture_binding
 from app.services.crawl import CrawlError, validate_url
 
 router=APIRouter(prefix='/v1/brands/{brand_id}/brain',tags=['Brand Brain'])
@@ -44,6 +46,27 @@ def create_session(brand_id:UUID,body:SetupDraft,user=Depends(current_user),conn
     return connection.execute('INSERT INTO mi.brand_onboarding_sessions(organization_id,brand_id,draft,crawl_job_id,created_by) VALUES(%s,%s,%s,%s,%s) RETURNING *',(b['organization_id'],brand_id,Jsonb(body.model_dump(mode='json')),job['id'] if job else None,user['id'])).fetchone()
 
 
+@router.post('/sessions/{session_id}/complete-intake', status_code=201)
+def complete_legacy_intake(brand_id: UUID, session_id: UUID, body: VersionAction,
+                           user=Depends(current_user), connection=Depends(actor_transaction)):
+    brand = access(connection, brand_id, True)
+    lock_key(connection, 'brain:' + str(brand_id))
+    current = session(connection, brand_id)
+    if current['id'] != session_id or current['version'] != body.expected_version:
+        raise HTTPException(409, 'A newer intake exists. Reload to continue.')
+    draft = SetupDraft.model_validate(current['draft'])
+    if current['status'] != 'submitted' or draft.research_intake_version != 0 or current['research_job_id']:
+        raise HTTPException(409, 'Only a submitted legacy intake awaiting research can be completed')
+    draft.research_intake_version = 1
+    return connection.execute(
+        """INSERT INTO mi.brand_onboarding_sessions
+           (organization_id, brand_id, draft, crawl_job_id, created_by)
+           VALUES (%s,%s,%s,%s,%s) RETURNING *""",
+        (brand['organization_id'], brand_id, Jsonb(draft.model_dump(mode='json')),
+         current['crawl_job_id'], user['id'])
+    ).fetchone()
+
+
 @router.get('/sessions/current')
 def current_session(brand_id:UUID,connection=Depends(actor_transaction)):
     access(connection,brand_id);return session(connection,brand_id)
@@ -64,6 +87,11 @@ def submit(brand_id:UUID,session_id:UUID,body:VersionAction,user=Depends(current
     if old['status']=='submitted':return old
     try:details=SetupDraft.model_validate(old['draft']).require_complete()
     except ValueError as exc:raise HTTPException(422,str(exc))
+    if details.research_intake_version == 1 and old['crawl_job_id']:
+        captured_site = b['website_url']
+        submitted_site = next((p.url for p in details.online_presence if p.platform == 'website'), None)
+        if not captured_site or not submitted_site or captured_site.rstrip('/') != submitted_site.rstrip('/'):
+            raise HTTPException(409, 'The website changed. Use the website linked to this capture before submitting.')
     # Owner-issued empty workspaces accept client inputs before provider setup.
     if b['intake'].get('client_onboarding'):
         connection.execute('SELECT mi.submit_client_setup(%s,%s)',(brand_id,Jsonb(old['draft'])))
@@ -103,18 +131,24 @@ def confirm_intake(brand_id:UUID,session_id:UUID,body:VersionAction,user=Depends
 
 @router.post('/sessions/{session_id}/research-pilot')
 def run_session_pilot(brand_id:UUID,session_id:UUID,body:VersionAction,user=Depends(current_user)):
-    from app.config import settings
     from app.db import transaction
     from app.research_pilot import run_pilot
     with transaction(user['id']) as c:
         b=access(c,brand_id,True);require_admin(c,b['organization_id']);s=session(c,brand_id,session_id)
         if s['version']!=body.expected_version or s['status']!='submitted' or session(c,brand_id)['id']!=session_id:
             raise HTTPException(409,'Use the current submitted intake')
+        if not s['crawl_job_id']:
+            raise HTTPException(409, 'Complete website capture for this intake before research')
         if settings().research_pilot_brand_id!=brand_id:
             raise HTTPException(503,'This brand does not have a configured research pilot')
+        # Older captures predate the prompt template. Only an organization
+        # admin can install it; the research worker remains read-only here.
+        from app.services.research_storage import ensure_template
+        lock_key(c, 'brain:' + str(brand_id))
+        ensure_template(c, b, user['id'], 'brand_research')
     # The caller transaction is closed before the bound worker writes audit rows.
     try:
-        result=run_pilot('run')
+        result=run_pilot('run', capture_job_id=s['crawl_job_id'])
     finally:
         with transaction(user['id']) as c:
             job=c.execute("SELECT id FROM mi.jobs WHERE brand_id=%s AND kind='research' ORDER BY created_at DESC LIMIT 1",(brand_id,)).fetchone()
@@ -132,16 +166,34 @@ def progress(brand_id:UUID,session_id:UUID,connection=Depends(actor_transaction)
     internal=bscope(connection,brand_id,'internal:read')
     profile=latest_profile(connection,brand_id) if internal else None
     job=connection.execute('SELECT mi.brain_job_status(%s,%s) AS job',(brand_id,s['crawl_job_id'])).fetchone()['job'] if s['crawl_job_id'] else None
+    capture_unconfigured = (settings().crawl_scheduler_enabled and not capture_binding(brand_id)
+                            and (not job or job['status'] in {'queued','retry'}))
     # Broader research remains the existing human/provider-gated workflow. Reflect it if one exists.
     research=connection.execute('SELECT mi.brain_job_status(%s,%s) AS job',(brand_id,s['research_job_id'])).fetchone()['job'] if s['research_job_id'] else None
     v=connection.execute('SELECT * FROM mi.brand_brain_versions WHERE brand_id=%s AND session_id=%s ORDER BY version DESC LIMIT 1',(brand_id,s['id'])).fetchone()
     done=bool(job and job['status']=='succeeded');failed=bool(job and job['status']=='failed');research_done=bool(research and research['status']=='succeeded');research_failed=bool(research and research['status']=='failed')
+    coverage = {}
+    if research_done and internal:
+        row = connection.execute(
+            "SELECT body->'coverage' AS areas FROM mi.research_dossiers WHERE brand_id=%s AND job_id=%s",
+            (brand_id, s['research_job_id'])
+        ).fetchone()
+        coverage = {item['area']: item['status'] for item in (row or {}).get('areas') or []}
+    def research_stage(area):
+        if research_done:
+            return 'completed' if coverage.get(area) == 'supported' else 'needs_review'
+        if research_failed:
+            return 'failed'
+        if research and research['status'] == 'running':
+            return 'running'
+        return 'needs_review' if done else 'pending'
+
     stage1='completed' if done else 'failed' if failed else 'running' if job and job['status']=='running' else 'pending'
     stages=[{'key':'presence','title':'Discovering online presence','state':stage1},
         {'key':'business','title':'Understanding the business','state':'completed' if done else 'pending'},
         {'key':'products','title':'Exploring products and offerings','state':'needs_review' if done else 'pending'},
-        {'key':'audience','title':'Researching the audience','state':'completed' if research_done else 'failed' if research_failed else 'running' if research and research['status']=='running' else 'needs_review' if done else 'pending'},
-        {'key':'market','title':'Analysing market context','state':'completed' if research_done else 'failed' if research_failed else 'needs_review' if done else 'pending'},
+        {'key':'audience','title':'Researching the audience','state':research_stage('audience')},
+        {'key':'market','title':'Analysing market context','state':research_stage('market')},
         {'key':'synthesis','title':'Synthesising the Brand Brain','state':'completed' if v else 'pending'}]
     sources=v['body']['sources'] if v else []
     # Before synthesis, only staff may query raw source storage; clients get safe materialized metadata later.
@@ -149,12 +201,16 @@ def progress(brand_id:UUID,session_id:UUID,connection=Depends(actor_transaction)
         rows=connection.execute('SELECT source_id,url,title,created_at FROM mi.crawl_pages WHERE brand_id=%s AND job_id=%s ORDER BY created_at',(brand_id,s['crawl_job_id'])).fetchall()
         sources=[{'source_id':r['source_id'],'url':r['url'],'publisher':r['title'],'accessed_at':r['created_at'],'access_limitations':['Public HTML; underlying website claims require review.']} for r in rows]
     waiting_configuration=s['status']=='submitted' and not job
+    config = settings()
+    pilot_configured = bool(config.research_pilot_enabled and config.research_pilot_brand_id == brand_id
+                            and config.research_pilot_worker_database_url and config.research_pilot_service_user_id)
     state='created' if s['status']=='draft' and (not job or not b['intake'].get('client_onboarding')) else 'awaiting_configuration' if waiting_configuration else 'failed' if failed or research_failed else 'completed' if v and research_done else 'awaiting_input' if done else 'running' if job and job['status']=='running' else 'cancelled' if job and job['status']=='cancelled' else 'queued'
-    return {'session_id':s['id'],'state':state,'capture_job':job,'research_job':research,'stages':stages,'sources':sources,'source_count':len(sources),'version_id':v['id'] if v else None,
-        'missing_research_inputs':missing,'profile_confirmed':profile['status']=='confirmed' if profile else None,
-        'pending_action':'complete_research_inputs' if missing else 'capture_website' if not done else 'review_profile' if not research else 'review_research' if research_done else 'research_job',
+    return {'session_id':s['id'],'state':'capture_unconfigured' if capture_unconfigured else state,'capture_job':job,'research_job':research,'stages':stages,'sources':sources,'source_count':len(sources),'version_id':v['id'] if v else None,
+        'research_pilot_configured':pilot_configured,'missing_research_inputs':missing,'profile_confirmed':profile['status']=='confirmed' if profile else None,
+        'pending_action':'configure_capture' if capture_unconfigured else 'complete_research_inputs' if missing else 'capture_website' if not done else 'review_profile' if not research and not (profile and profile['status']=='confirmed') else 'configure_research' if not research and not pilot_configured else 'start_research' if not research else 'review_research' if research_done else 'research_job',
         'can_synthesise':done and s['status']=='submitted' and bscope(connection,brand_id,'internal:read'),'can_retry':failed and bscope(connection,brand_id,'crawl:run'),
-        'activity':'Your brand details are saved. Your agency can review them now; research and API connections will be configured separately.' if waiting_configuration else 'The research job failed. Review the recorded error and existing workflow gates before requesting another run.' if research_failed else 'The existing research worker is running; its output remains unconfirmed.' if research and research['status']=='running' else 'Captured public pages are ready for review. Audience and market research require the existing confirmed intake, provider and explicit research start.' if done else 'Waiting for the existing public-capture worker.' if not failed else 'Public capture failed; review access limitations before retrying.','error':research['last_error'] if research_failed else job['last_error'] if job else None}
+        'capture_unconfigured': bool(capture_unconfigured),
+        'activity':'Your agency needs to connect a website capture worker to this brand.' if capture_unconfigured else 'Your brand details are saved. Your agency can review them now; research and API connections will be configured separately.' if waiting_configuration else 'The research job failed. Review the recorded error and existing workflow gates before requesting another run.' if research_failed else 'The existing research worker is running; its output remains unconfirmed.' if research and research['status']=='running' else 'Captured public pages are ready for review. Audience and market research require the existing confirmed intake, provider and explicit research start.' if done else 'Waiting for the existing public-capture worker.' if not failed else 'Public capture failed; review access limitations before retrying.','error':research['last_error'] if research_failed else job['last_error'] if job else None}
 
 
 def bscope(c,bid,scope):return c.execute('SELECT mi.has_brand_scope(%s,%s) AS ok',(bid,scope)).fetchone()['ok']
@@ -184,6 +240,8 @@ def start_capture(brand_id:UUID,session_id:UUID,body:CaptureStart,idempotency_ke
         return {'session':s,'job':previous['response']}
     if s['version']!=body.expected_version:raise HTTPException(409,'Draft changed; reload before starting capture')
     if s['crawl_job_id']:raise HTTPException(409,'Public capture is already linked to this session; open its status')
+    if settings().crawl_scheduler_enabled and not capture_binding(brand_id):
+        raise HTTPException(503, 'The agency needs to configure website capture for this brand before queuing a job')
     submitted_site=next((link['url'] for link in draft['online_presence'] if link['platform']=='website'),None)
     if s['status']=='submitted' and (not submitted_site or submitted_site.rstrip('/')!=site.rstrip('/')):
         raise HTTPException(409,'The website must match the submitted inputs; start a new draft to change it')

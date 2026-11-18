@@ -2,8 +2,13 @@ from functools import lru_cache
 from datetime import date, datetime
 from uuid import UUID
 
-from pydantic import Field, SecretStr, model_validator
+from pydantic import BaseModel, Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class CrawlBinding(BaseModel):
+    service_user_id: UUID
+    database_url: SecretStr
 
 
 class Settings(BaseSettings):
@@ -24,6 +29,7 @@ class Settings(BaseSettings):
     crawl_worker_database_url: SecretStr | None = None
     crawl_service_user_id: UUID | None = None
     crawl_brand_id: UUID | None = None
+    crawl_bindings: dict[UUID, CrawlBinding] = Field(default_factory=dict)
     crawl_scheduler_enabled: bool = False
     ui_directory: str | None = None
     model_provider: str = "disabled"

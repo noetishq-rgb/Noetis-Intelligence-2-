@@ -86,7 +86,7 @@ def project(connection,row):
         ch['source_count']=len({sid for f in ch['findings'] for sid in f['source_ids']})
         ch['confidence']='unknown' if any(f['unknown'] for f in ch['findings']) else min((f['confidence'] for f in ch['findings']),key=lambda c:['unknown','low','medium','high'].index(c),default='unknown')
         ch['summary']=ch['findings'][0]['text']
-    return {'id':row['id'],'version':row['version'],'brand_id':row['brand_id'],'created_at':row['created_at'],'document':document,'review_sequence':len(reviews),'content_sha256':payload_hash(document)}
+    return {'id':row['id'],'session_id':row['session_id'],'version':row['version'],'brand_id':row['brand_id'],'created_at':row['created_at'],'document':document,'review_sequence':len(reviews),'content_sha256':payload_hash(document)}
 
 
 def threads(connection,brand_id,version_id):

@@ -43,32 +43,55 @@ def verify_scheduler(request:Request):
     return claims
 
 
-def run_bound_capture():
+def capture_binding(brand_id):
+    config = settings()
+    if not config.crawl_scheduler_enabled:
+        return None
+    if brand_id == config.crawl_brand_id and config.crawl_service_user_id and config.crawl_worker_database_url:
+        return config.crawl_service_user_id, config.crawl_worker_database_url
+    extra = config.crawl_bindings.get(brand_id)
+    return (extra.service_user_id, extra.database_url) if extra else None
+
+
+def run_bound_capture(brand_id=None):
     config=settings()
-    if not config.crawl_scheduler_enabled or not config.crawl_worker_database_url or not config.crawl_service_user_id or not config.crawl_brand_id:
-        raise HTTPException(503,'Website capture worker is not configured')
-    url=config.crawl_worker_database_url.get_secret_value();actor=config.crawl_service_user_id
+    brand_id = brand_id or config.crawl_brand_id
+    binding = capture_binding(brand_id)
+    if not binding:
+        raise HTTPException(503, 'The agency needs to configure website capture for this brand')
+    actor, secret = binding
+    url = secret.get_secret_value()
     from app.worker import run_once,validate_service
     with transaction(actor,url) as c:
         check_runtime_role(c);validate_service(c,actor)
         brands=c.execute('SELECT id FROM mi.brand_workspaces').fetchall()
-        if {r['id'] for r in brands}!={config.crawl_brand_id}:
+        if {r['id'] for r in brands} != {brand_id}:
             raise HTTPException(503,'Website worker brand binding is unsafe')
+        if not c.execute("SELECT mi.has_brand_scope(%s,'crawl:run') AS allowed", (brand_id,)).fetchone()['allowed']:
+            raise HTTPException(503, 'Website worker lacks capture scope')
     # No owner transaction remains open while the separate service writes audit entries.
     had_work=run_once(actor,database_url=url)
     with transaction(actor,url) as c:
-        row=c.execute("SELECT id,status,last_error FROM mi.jobs WHERE brand_id=%s AND kind='website_crawl' ORDER BY created_at DESC LIMIT 1",(config.crawl_brand_id,)).fetchone()
-    return {'processed':had_work,'brand_id':config.crawl_brand_id,'job':row}
+        row=c.execute("SELECT id,status,last_error FROM mi.jobs WHERE brand_id=%s AND kind='website_crawl' ORDER BY created_at DESC LIMIT 1",(brand_id,)).fetchone()
+    return {'processed':had_work,'brand_id':brand_id,'job':row}
+
+
+@router.get('/internal/crawl/brands', dependencies=[Depends(verify_scheduler)], include_in_schema=False)
+def scheduled_brands():
+    config = settings()
+    brands = set(config.crawl_bindings)
+    if config.crawl_brand_id:
+        brands.add(config.crawl_brand_id)
+    return sorted(str(brand) for brand in brands if capture_binding(brand))
 
 
 @router.post('/internal/crawl',dependencies=[Depends(verify_scheduler)],include_in_schema=False)
-def scheduled_capture():
-    return run_bound_capture()
+def scheduled_capture(brand_id: UUID | None = None):
+    return run_bound_capture(brand_id) if brand_id else run_bound_capture()
 
 
 @router.post('/v1/brands/{brand_id}/brain/capture/run')
 def owner_capture(brand_id:UUID,user=Depends(current_user)):
     with transaction(user['id']) as c:
         brand=require_brand(c,brand_id,'crawl:run');require_admin(c,brand['organization_id'])
-    if settings().crawl_brand_id!=brand_id:raise HTTPException(503,'This brand’s capture worker is not configured yet')
-    return run_bound_capture()
+    return run_bound_capture(brand_id)

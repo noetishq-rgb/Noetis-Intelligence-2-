@@ -30,8 +30,12 @@ def test_rich_submission_capture_human_confirmation_and_pilot_are_connected(api,
     assert api.post(base+'/sessions/'+session['id']+'/submit',headers=client,json={'expected_version':submitted.json()['version']}).status_code==200
     progress=api.get(base+'/sessions/'+session['id']+'/progress',headers=client).json()
     assert progress['pending_action']=='capture_website' and progress['missing_research_inputs']==[]
-    capture=api.post(base+'/sessions/'+session['id']+'/capture',headers={**h,'Idempotency-Key':str(uuid4())},json={'expected_version':submitted.json()['version']})
+    # Simulate an older capture which did not install any prompt templates.
+    with monkeypatch.context() as older_capture:
+        older_capture.setattr('app.services.research_storage.ensure_template', lambda *args: None)
+        capture=api.post(base+'/sessions/'+session['id']+'/capture',headers={**h,'Idempotency-Key':str(uuid4())},json={'expected_version':submitted.json()['version']})
     assert capture.status_code==202,capture.text
+    assert owner.execute('SELECT count(*) AS n FROM mi.prompt_templates WHERE brand_id=%s',(bid,)).fetchone()['n']==0
     current=capture.json()['session']
     actor=service_factory({'brand':{'id':bid,'organization_id':issued['organization']}})
     def website(url,max_pages,trace=None):return [CrawledPage(url,200,'Public source','A public description.',TEXT,'a'*64)]
@@ -64,3 +68,33 @@ def test_rich_submission_capture_human_confirmation_and_pilot_are_connected(api,
     assert progress['research_job']['status']=='succeeded'
     repeat=api.post(path,headers=h,json={'expected_version':result['session']['version']})
     assert repeat.status_code==200 and provider.calls==1
+
+
+def test_client_can_complete_legacy_intake_after_capture(api, issued, service_factory):
+    from tests.test_api_security import fake_crawl
+    client = login_and_change(api, issued)
+    h = issued['owner_headers']
+    bid = issued['account']['brand_id']
+    base = f'/v1/brands/{bid}/brain/sessions'
+    rich = rich_draft()
+    legacy = {k: rich[k] for k in ['brand_name','category','objectives','online_presence']}
+    old = api.post(base, headers=client, json=legacy).json()
+    url = base + '/' + old['id']
+    submitted = api.post(url + '/submit', headers=client, json={'expected_version': old['version']}).json()
+    cap = api.post(url + '/capture', headers={**h,'Idempotency-Key': str(uuid4())},
+                   json={'expected_version': submitted['version']}).json()
+    actor = service_factory({'brand': {'id': bid, 'organization_id': issued['organization']}})
+    assert crawl_once(actor, fake_crawl)
+    rev = {'expected_version': cap['session']['version']}
+    r = api.post(url + '/complete-intake', headers=client, json=rev)
+    assert r.status_code == 201, r.text
+    draft = r.json()
+    assert draft['id'] != old['id'] and draft['crawl_job_id'] == cap['job']['id']
+    assert draft['draft']['objectives'] == legacy['objectives']
+    assert api.post(url + '/complete-intake', headers=client, json=rev).status_code == 409
+    url = base + '/' + draft['id']
+    saved = api.put(url, headers=client, json={'expected_version': draft['version'], 'draft': rich}).json()
+    sent = api.post(url + '/submit', headers=client, json={'expected_version': saved['version']}).json()
+    confirmed = api.post(url + '/confirm-intake', headers=h, json={'expected_version': sent['version']})
+    assert confirmed.status_code == 200, confirmed.text
+    assert confirmed.json()['approval_status'] == 'confirmed'

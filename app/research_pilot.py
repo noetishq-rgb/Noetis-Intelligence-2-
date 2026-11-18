@@ -110,7 +110,7 @@ def check_model_access(config):
         return {'verified': False, 'error': 'model_metadata_unavailable'}
 
 
-def run_pilot(action):
+def run_pilot(action, *, capture_job_id=None):
     config, actor, url = binding()
     brand_id = config.research_pilot_brand_id
     with transaction(actor, url) as c:
@@ -126,12 +126,19 @@ def run_pilot(action):
         state = readiness(c, brand_id)
         if not state['ready'] or state['job'] or state['generation_attempts']:
             return {**state, 'model_access': access, 'processed': False}
+        workflow = workflow_for_brand(c, brand_id, lock=True)
+        if capture_job_id is None:
+            latest = c.execute("""SELECT id FROM mi.jobs WHERE brand_id=%s AND workflow_id=%s
+                AND kind='website_crawl' AND status='succeeded' ORDER BY created_at DESC,id DESC LIMIT 1""",
+                (brand_id, workflow['id'])).fetchone()
+            capture_job_id = latest['id'] if latest else None
         pages = c.execute('''SELECT p.*,s.accessed_at FROM mi.crawl_pages p JOIN mi.research_sources s
             ON s.id=p.source_id AND s.brand_id=p.brand_id JOIN mi.jobs j ON j.id=p.job_id AND j.brand_id=p.brand_id
-            WHERE p.brand_id=%s AND j.status='succeeded' ORDER BY p.created_at,p.id LIMIT 5''', (brand_id,)).fetchall()
+            WHERE p.brand_id=%s AND j.id=%s AND j.workflow_id=%s AND j.kind='website_crawl'
+            AND j.status='succeeded' ORDER BY p.created_at,p.id LIMIT 5''',
+            (brand_id, capture_job_id, workflow['id'])).fetchall()
         if not pages:
             raise HTTPException(409, 'Successful saved website capture is required')
-        workflow = workflow_for_brand(c, brand_id)
         snapshots = [saved_source(p) for p in pages]
         body = ResearchStart(expected_workflow_version=workflow['version'], sources=[seed for seed,_ in snapshots])
         accepted = start(brand_id, body, 'single-dollar-research-pilot-v1', {'id': actor}, c)
