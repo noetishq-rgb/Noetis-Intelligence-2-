@@ -54,7 +54,10 @@ class AccountResult(StrictModel):
 
 
 def directory(connection,organization_id):
-    return connection.execute('SELECT mi.client_account_directory(%s) AS accounts',(organization_id,)).fetchone()['accounts']
+    return connection.execute("""SELECT coalesce(jsonb_agg(item ORDER BY ordinal), '[]') AS accounts
+        FROM jsonb_array_elements(mi.client_account_directory(%s)) WITH ORDINALITY AS listed(item, ordinal)
+        JOIN mi.brand_workspaces b ON b.id=(item->>'brand_id')::uuid AND b.status='active'""",
+        (organization_id,)).fetchone()['accounts']
 
 
 @router.get('/v1/organizations/{organization_id}/clients',response_model=list[ClientView])

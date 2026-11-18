@@ -1,0 +1,4 @@
+BEGIN;
+CREATE SEQUENCE mi.console_trial_slots MINVALUE 1 MAXVALUE 25 NO CYCLE;
+GRANT USAGE ON SEQUENCE mi.console_trial_slots TO mi_api;
+COMMIT;

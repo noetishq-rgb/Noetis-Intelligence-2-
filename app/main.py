@@ -301,7 +301,7 @@ def create_brand(organization_id: UUID, body: BrandCreate, idempotency_key: str 
 
 @app.get("/v1/brands", response_model=list[BrandView], tags=["Workspaces"])
 def brands(after: UUID | None = None, limit: int = Query(50, ge=1, le=100), connection=Depends(actor_transaction)):
-    rows = connection.execute("SELECT * FROM mi.brand_workspaces WHERE (%s::uuid IS NULL OR id>%s) ORDER BY id LIMIT %s", (after, after, limit)).fetchall()
+    rows = connection.execute("SELECT * FROM mi.brand_workspaces WHERE status='active' AND (%s::uuid IS NULL OR id>%s) ORDER BY id LIMIT %s", (after, after, limit)).fetchall()
     return [view(BrandView, row) for row in rows]
 
 
@@ -485,6 +485,8 @@ app.include_router(planning_router)
 
 from app.brain_api import router as brain_router
 app.include_router(brain_router)
+from app.console_api import router as console_router
+app.include_router(console_router)
 
 from app.client_access import router as client_access_router
 app.include_router(client_access_router)

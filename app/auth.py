@@ -87,7 +87,7 @@ def actor_transaction(request: Request, user=Depends(current_user)):
 
 
 def require_brand(connection, brand_id: UUID, scope: str) -> dict:
-    row = connection.execute("SELECT *,mi.org_role(organization_id) AS actor_role FROM mi.brand_workspaces WHERE id=%s AND mi.has_brand_scope(id,%s)", (brand_id, scope)).fetchone()
+    row = connection.execute("SELECT *,mi.org_role(organization_id) AS actor_role FROM mi.brand_workspaces WHERE id=%s AND status='active' AND mi.has_brand_scope(id,%s)", (brand_id, scope)).fetchone()
     if not row:
         # The same response is used for absent and inaccessible brands.
         raise HTTPException(404, "Brand workspace not found")

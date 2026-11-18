@@ -65,6 +65,8 @@ def run_bound_capture(brand_id=None):
     with transaction(actor,url) as c:
         check_runtime_role(c);validate_service(c,actor)
         brands=c.execute('SELECT id FROM mi.brand_workspaces').fetchall()
+        if not brands:
+            return {'processed': False, 'brand_id': brand_id, 'job': None, 'reason': 'no_assigned_workspace'}
         if {r['id'] for r in brands} != {brand_id}:
             raise HTTPException(503,'Website worker brand binding is unsafe')
         if not c.execute("SELECT mi.has_brand_scope(%s,'crawl:run') AS allowed", (brand_id,)).fetchone()['allowed']:
