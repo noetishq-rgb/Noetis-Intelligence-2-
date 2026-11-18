@@ -1,5 +1,30 @@
 {
   "$defs": {
+    "ResearchBrief": {
+      "additionalProperties": false,
+      "properties": {
+        "question": {
+          "default": "",
+          "maxLength": 1000,
+          "title": "Question",
+          "type": "string"
+        },
+        "tone_of_voice": {
+          "default": "",
+          "maxLength": 400,
+          "title": "Tone Of Voice",
+          "type": "string"
+        },
+        "guidelines": {
+          "default": "",
+          "maxLength": 4000,
+          "title": "Guidelines",
+          "type": "string"
+        }
+      },
+      "title": "ResearchBrief",
+      "type": "object"
+    },
     "SourceSeed": {
       "additionalProperties": false,
       "properties": {
@@ -72,6 +97,17 @@
   },
   "additionalProperties": false,
   "properties": {
+    "brief": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ResearchBrief"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
     "task_type": {
       "default": "brand_research",
       "enum": [

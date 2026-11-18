@@ -128,7 +128,7 @@ def prepare(actor,job):
         template=connection.execute("SELECT * FROM mi.prompt_templates WHERE id=%s AND brand_id=%s", (job['payload']['template_id'], job['brand_id'])).fetchone()
         if not template or template['output_schema']!='research-dossier-v1.1':
             raise ValueError('research_template_unavailable')
-        request=compile_prompt(profile,evidence,job['payload']['areas'],job['payload']['task_type'],template=template)
+        request=compile_prompt(profile,evidence,job['payload']['areas'],job['payload']['task_type'],template=template, brief=job["payload"].get("brief"))
     return request,profile,evidence
 
 

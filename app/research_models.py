@@ -23,7 +23,14 @@ class SourceSeed(StrictModel):
         return self
 
 
+class ResearchBrief(StrictModel):
+    question: Annotated[str, Field(max_length=1000)] = ''
+    tone_of_voice: Annotated[str, Field(max_length=400)] = ''
+    guidelines: Annotated[str, Field(max_length=4000)] = ''
+
+
 class ResearchStart(StrictModel):
+    brief: ResearchBrief | None = None
     task_type: Literal["brand_research", "competitor_research", "audience_research", "market_research", "social_listening", "content_gap"] = "brand_research"
     expected_workflow_version: Annotated[int, Field(ge=1)]
     sources: Annotated[list[SourceSeed], Field(max_length=8)] = Field(default_factory=list)

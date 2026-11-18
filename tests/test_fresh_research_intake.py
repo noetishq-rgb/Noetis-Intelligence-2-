@@ -8,7 +8,7 @@ from tests.test_research import RecordedProvider,TEXT
 
 
 def rich_draft():
-    return {'research_intake_version':1,'brand_name':'Fresh client brand','category':'Food & beverage',
+    return {'research_intake_version':1,'brief':{'question':'Which benefits are documented?', 'tone_of_voice':'Direct', 'guidelines':'Use evidence.'},'brand_name':'Fresh client brand','category':'Food & beverage',
         'objectives':['Brand awareness','Lead generation'],'online_presence':[{'url':'https://example.com/','platform':'website'}],
         'business_description':'Protein snacks for active customers.','audience_description':'Adults seeking convenient protein snacks.',
         'target_geographies':['India'],'primary_objective':'Brand awareness',
@@ -60,9 +60,14 @@ def test_rich_submission_capture_human_confirmation_and_pilot_are_connected(api,
     monkeypatch.setattr(research_worker,'run_once',lambda actor,**kwargs:real_run(actor,provider=provider,**kwargs))
     path=base+'/sessions/'+session['id']+'/research-pilot'
     assert api.post(path,headers=client,json=body).status_code==404
-    response=api.post(path,headers=h,json=body)
+    question='Which messages have evidence on our site?'
+    response=api.post(path,headers=h,json={**body,'question':question})
     assert response.status_code==200,response.text
     result=response.json();assert result['job']['status']=='succeeded',result
+    import json
+    assert json.loads(provider.requests[0].context_json)['brand_brief'] == {**rich_draft()['brief'],'question':question}
+    owner_progress=api.get(base+'/sessions/'+session['id']+'/progress',headers=h).json()
+    assert owner_progress['research_question']==question
     assert result['session']['research_job_id']==result['job']['id'] and provider.calls==1
     progress=api.get(base+'/sessions/'+session['id']+'/progress',headers=client).json()
     assert progress['research_job']['status']=='succeeded'

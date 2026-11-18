@@ -2593,7 +2593,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/VersionAction"
+                "$ref": "#/components/schemas/PilotRunRequest"
               }
             }
           }
@@ -7365,6 +7365,27 @@
         ],
         "title": "PasswordChange"
       },
+      "PilotRunRequest": {
+        "properties": {
+          "expected_version": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Version"
+          },
+          "question": {
+            "type": "string",
+            "maxLength": 1000,
+            "title": "Question",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "expected_version"
+        ],
+        "title": "PilotRunRequest"
+      },
       "PlanningAccepted": {
         "properties": {
           "brand_id": {
@@ -8140,6 +8161,31 @@
         ],
         "title": "ResearchAccepted"
       },
+      "ResearchBrief": {
+        "properties": {
+          "question": {
+            "type": "string",
+            "maxLength": 1000,
+            "title": "Question",
+            "default": ""
+          },
+          "tone_of_voice": {
+            "type": "string",
+            "maxLength": 400,
+            "title": "Tone Of Voice",
+            "default": ""
+          },
+          "guidelines": {
+            "type": "string",
+            "maxLength": 4000,
+            "title": "Guidelines",
+            "default": ""
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ResearchBrief"
+      },
       "ResearchDossierV11": {
         "properties": {
           "schema_version": {
@@ -8591,6 +8637,16 @@
       },
       "ResearchStart": {
         "properties": {
+          "brief": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResearchBrief"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "task_type": {
             "type": "string",
             "enum": [
@@ -8839,6 +8895,16 @@
       },
       "SetupDraft": {
         "properties": {
+          "brief": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ResearchBrief"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "research_intake_version": {
             "type": "integer",
             "enum": [

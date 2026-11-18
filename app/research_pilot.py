@@ -110,7 +110,7 @@ def check_model_access(config):
         return {'verified': False, 'error': 'model_metadata_unavailable'}
 
 
-def run_pilot(action, *, capture_job_id=None):
+def run_pilot(action, *, capture_job_id=None, brief=None):
     config, actor, url = binding()
     brand_id = config.research_pilot_brand_id
     with transaction(actor, url) as c:
@@ -140,7 +140,7 @@ def run_pilot(action, *, capture_job_id=None):
         if not pages:
             raise HTTPException(409, 'Successful saved website capture is required')
         snapshots = [saved_source(p) for p in pages]
-        body = ResearchStart(expected_workflow_version=workflow['version'], sources=[seed for seed,_ in snapshots])
+        body = ResearchStart(brief=brief, expected_workflow_version=workflow['version'], sources=[seed for seed,_ in snapshots])
         accepted = start(brand_id, body, 'single-dollar-research-pilot-v1', {'id': actor}, c)
         c.execute('UPDATE mi.jobs SET max_attempts=1 WHERE id=%s AND brand_id=%s', (accepted.job_id, brand_id))
     def saved_capture(seeds, queries, trace=None):

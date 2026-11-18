@@ -47,7 +47,8 @@ def start(brand_id: UUID, body: ResearchStart, idempotency_key: str = Header(...
         except CrawlError:
             raise HTTPException(422, "A source URL is invalid")
     lock_key(connection, f"research:{brand_id}:{user['id']}:{idempotency_key}")
-    hashed = payload_hash(body.model_dump(mode="json"))
+    serialized = body.model_dump(mode="json", exclude={"brief"} if body.brief is None else set())
+    hashed = payload_hash(serialized)
     old = connection.execute("SELECT * FROM mi.idempotency_keys WHERE brand_id=%s AND actor_id=%s AND operation='research' AND key=%s",
         (brand_id, user["id"], idempotency_key)).fetchone()
     if old:
@@ -78,7 +79,7 @@ def start(brand_id: UUID, body: ResearchStart, idempotency_key: str = Header(...
     template = ensure_template(connection, brand, user["id"], body.task_type)
     updated = transition(connection, workflow, event, gates(workflow, human=True, confirmed_profile=True, resume_state="research_queued"),
                          body.expected_workflow_version, last_error=None)
-    payload = body.model_dump(mode="json")
+    payload = serialized
     payload.update(profile_artifact_id=str(profile["artifact_id"]), template_id=str(template["id"]))
     job = connection.execute("INSERT INTO mi.jobs(organization_id,brand_id,workflow_id,kind,payload,created_by) VALUES(%s,%s,%s,'research',%s,%s) RETURNING id",
         (brand["organization_id"], brand_id, workflow["id"], Jsonb(payload), user["id"])).fetchone()

@@ -4,7 +4,7 @@ from uuid import UUID, uuid4
 from fastapi import APIRouter, Depends, HTTPException, Header, Query
 from psycopg.types.json import Jsonb
 from app.auth import actor_transaction,current_user,require_brand,require_admin
-from app.brain_models import SetupDraft,SessionSave,VersionAction,CaptureStart,FindingReview,ThreadCreate,CommentCreate,ThreadAction,BrainConfirm,CHAPTERS
+from app.brain_models import SetupDraft,SessionSave,VersionAction,PilotRunRequest,CaptureStart,FindingReview,ThreadCreate,CommentCreate,ThreadAction,BrainConfirm,CHAPTERS
 from app.repository import lock_key,payload_hash,latest_profile,workflow_for_brand
 from app.services.brain import synthesise,version_row,project,quality,threads
 from app.config import settings
@@ -130,7 +130,7 @@ def confirm_intake(brand_id:UUID,session_id:UUID,body:VersionAction,user=Depends
 
 
 @router.post('/sessions/{session_id}/research-pilot')
-def run_session_pilot(brand_id:UUID,session_id:UUID,body:VersionAction,user=Depends(current_user)):
+def run_session_pilot(brand_id:UUID,session_id:UUID,body:PilotRunRequest,user=Depends(current_user)):
     from app.db import transaction
     from app.research_pilot import run_pilot
     with transaction(user['id']) as c:
@@ -148,7 +148,10 @@ def run_session_pilot(brand_id:UUID,session_id:UUID,body:VersionAction,user=Depe
         ensure_template(c, b, user['id'], 'brand_research')
     # The caller transaction is closed before the bound worker writes audit rows.
     try:
-        result=run_pilot('run', capture_job_id=s['crawl_job_id'])
+        brief = dict(s['draft'].get('brief') or {})
+        if body.question:
+            brief['question'] = body.question
+        result=run_pilot('run', capture_job_id=s['crawl_job_id'], brief=brief or None)
     finally:
         with transaction(user['id']) as c:
             job=c.execute("SELECT id FROM mi.jobs WHERE brand_id=%s AND kind='research' ORDER BY created_at DESC LIMIT 1",(brand_id,)).fetchone()
@@ -170,6 +173,11 @@ def progress(brand_id:UUID,session_id:UUID,connection=Depends(actor_transaction)
                             and (not job or job['status'] in {'queued','retry'}))
     # Broader research remains the existing human/provider-gated workflow. Reflect it if one exists.
     research=connection.execute('SELECT mi.brain_job_status(%s,%s) AS job',(brand_id,s['research_job_id'])).fetchone()['job'] if s['research_job_id'] else None
+    question = None
+    if internal and research:
+        row = connection.execute("SELECT payload->'brief'->>'question' AS question FROM mi.jobs WHERE id=%s AND brand_id=%s",
+                                 (s['research_job_id'],brand_id)).fetchone()
+        question = row['question'] if row else None
     v=connection.execute('SELECT * FROM mi.brand_brain_versions WHERE brand_id=%s AND session_id=%s ORDER BY version DESC LIMIT 1',(brand_id,s['id'])).fetchone()
     done=bool(job and job['status']=='succeeded');failed=bool(job and job['status']=='failed');research_done=bool(research and research['status']=='succeeded');research_failed=bool(research and research['status']=='failed')
     coverage = {}
@@ -206,7 +214,7 @@ def progress(brand_id:UUID,session_id:UUID,connection=Depends(actor_transaction)
                             and config.research_pilot_worker_database_url and config.research_pilot_service_user_id)
     state='created' if s['status']=='draft' and (not job or not b['intake'].get('client_onboarding')) else 'awaiting_configuration' if waiting_configuration else 'failed' if failed or research_failed else 'completed' if v and research_done else 'awaiting_input' if done else 'running' if job and job['status']=='running' else 'cancelled' if job and job['status']=='cancelled' else 'queued'
     return {'session_id':s['id'],'state':'capture_unconfigured' if capture_unconfigured else state,'capture_job':job,'research_job':research,'stages':stages,'sources':sources,'source_count':len(sources),'version_id':v['id'] if v else None,
-        'research_pilot_configured':pilot_configured,'missing_research_inputs':missing,'profile_confirmed':profile['status']=='confirmed' if profile else None,
+        'research_question':question,'research_pilot_configured':pilot_configured,'missing_research_inputs':missing,'profile_confirmed':profile['status']=='confirmed' if profile else None,
         'pending_action':'configure_capture' if capture_unconfigured else 'complete_research_inputs' if missing else 'capture_website' if not done else 'review_profile' if not research and not (profile and profile['status']=='confirmed') else 'configure_research' if not research and not pilot_configured else 'start_research' if not research else 'review_research' if research_done else 'research_job',
         'can_synthesise':done and s['status']=='submitted' and bscope(connection,brand_id,'internal:read'),'can_retry':failed and bscope(connection,brand_id,'crawl:run'),
         'capture_unconfigured': bool(capture_unconfigured),

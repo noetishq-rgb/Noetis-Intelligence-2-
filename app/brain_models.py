@@ -4,6 +4,7 @@ from uuid import UUID
 from pydantic import Field, model_validator
 from app.models import StrictModel, PresenceLink, ShortText, Citation, Text, MoneyRange, OnboardingInput
 from pydantic import HttpUrl
+from app.research_models import ResearchBrief
 
 CHAPTERS={'business':'Business & Offerings','audience':'Audience Intelligence','positioning':'Brand Positioning','market':'Market Intelligence','presence':'Marketing Presence','objectives':'Business Objectives'}
 Provenance=Literal['publicly_observed','ai_inferred','founder_provided','founder_confirmed','unverified']
@@ -16,6 +17,7 @@ class PresenceDraft(StrictModel):
 
 
 class SetupDraft(StrictModel):
+    brief: ResearchBrief | None = None
     research_intake_version: Literal[0,1] = 0
     brand_name: Annotated[str,Field(max_length=300)]=''
     online_presence: Annotated[list[PresenceDraft],Field(max_length=12)]=Field(default_factory=list)
@@ -55,6 +57,10 @@ class SessionSave(StrictModel):
 
 class VersionAction(StrictModel):
     expected_version: Annotated[int,Field(ge=1)]
+
+
+class PilotRunRequest(VersionAction):
+    question: Annotated[str, Field(max_length=1000)] = ''
 
 
 class CaptureStart(VersionAction):
