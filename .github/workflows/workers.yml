@@ -19,15 +19,15 @@ concurrency:
   cancel-in-progress: false
 jobs:
   crawl:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with: {persist-credentials: false}
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with: {python-version: '3.12'}
       - run: python scripts/run_hosted_crawl.py
         env:
@@ -39,11 +39,11 @@ jobs:
           NOETIS_RESEARCH_PILOT_ACTION: ${{ inputs.research_pilot }}
   research:
     if: vars.NOETIS_RESEARCH_WORKER_ENABLED == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with: {python-version: '3.12'}
       - run: pip install -r requirements.lock
       - run: python scripts/run_worker.py --kind research --seconds 240
@@ -60,11 +60,11 @@ jobs:
           MI_RESEARCH_MAX_COST_PAISE: ${{ vars.NOETIS_MAX_COST_PAISE }}
   planning:
     if: vars.NOETIS_PLANNING_WORKER_ENABLED == 'true'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
         with: {python-version: '3.12'}
       - run: pip install -r requirements.lock
       - run: python scripts/run_worker.py --kind planning --seconds 240
